@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { Button, Box, Typography } from "@mui/material";
 
 import PingPongGame from "./components/games/PingPongGame";
+import { The2048Game } from "./components/games/2048Game";
 
 export interface NavigationButtonsProps {
   navigate: (path: string) => void;
@@ -33,6 +34,9 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ navigate }) => {
       <Button variant="contained" onClick={() => navigate("/pingpong")}>
         Go to Ping Pong game
       </Button>
+      <Button variant="contained" onClick={() => navigate("/the-2048-game")}>
+        Go to the 2048 game
+      </Button>
     </Box>
   );
 };
@@ -55,6 +59,11 @@ function FirstApp() {
     case "/pingpong":
       content = <PingPongGame />;
       break;
+
+    case "/the-2048-game":
+      content = <The2048Game />;
+      break;
+
     case "/":
     default:
       content = (

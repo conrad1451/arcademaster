@@ -229,7 +229,7 @@ const createInitialBoard = (): Board => {
   return board;
 };
 
-export const Game2048: React.FC = () => {
+export const The2048Game: React.FC = () => {
   // CHQ: Gemini AI: replaced createEmptyBoard with a helper
   //      function createInitialBoard which gets called here
   const [board, setBoard] = useState<Board>(createInitialBoard);
