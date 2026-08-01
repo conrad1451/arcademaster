@@ -79,7 +79,6 @@ interface Player {
   pos: { x: number; y: number };
   tetromino: number[][];
   color: string;
-  collided: boolean;
 }
 
 // --- Helper Functions ---
@@ -277,7 +276,6 @@ export const Tetris: React.FC = () => {
     pos: { x: 0, y: 0 },
     tetromino: [[0]],
     color: "#000000",
-    collided: false,
   });
 
   // Spawn new tetromino
@@ -287,7 +285,6 @@ export const Tetris: React.FC = () => {
       pos: { x: Math.floor(BOARD_WIDTH / 2) - 1, y: 0 },
       tetromino: nextTetromino.shape,
       color: nextTetromino.color,
-      collided: false,
     });
   }, []);
 
@@ -336,62 +333,37 @@ export const Tetris: React.FC = () => {
     }
   };
 
-  const drop = () => {
-    // Increase speed as levels progress
-    if (lines >= level * 10) {
-      setLevel((prev) => prev + 1);
-      setDropTime((prev) =>
-        prev ? Math.max(100, prev - 100) : INITIAL_DROP_TIME,
-      );
-    }
-
-    if (!checkCollision(player, grid, { x: 0, y: 1 })) {
-      setPlayer((prev) => ({
-        ...prev,
-        pos: { x: prev.pos.x, y: prev.pos.y + 1 },
-      }));
-    } else {
+  // CHQ: Claude AI (Sonnet): Locking a piece (merge into grid,
+  // clear lines, update score, spawn next piece) used to live
+  // in a useEffect keyed off a `player.collided` flag. That
+  // caused setState calls to run synchronously inside an effect
+  // body, which React warns about (cascading renders). It's
+  // moved here into a plain function that's called directly
+  // from the drop/hardDrop event handlers instead - no effect,
+  // no flag needed.
+  const lockPiece = useCallback(
+    (finalPlayer: Player) => {
       // Game Over condition (collided at top)
-      if (player.pos.y < 1) {
+      if (finalPlayer.pos.y < 1) {
         setGameOver(true);
         setDropTime(null);
         return;
       }
-      setPlayer((prev) => ({ ...prev, collided: true }));
-    }
-  };
 
-  const hardDrop = () => {
-    let currentY = player.pos.y;
-    while (
-      !checkCollision(player, grid, { x: 0, y: currentY - player.pos.y + 1 })
-    ) {
-      currentY++;
-    }
-    setPlayer((prev) => ({
-      ...prev,
-      pos: { x: prev.pos.x, y: currentY },
-      collided: true,
-    }));
-  };
-
-  // Merging current piece into board & handling line sweeps
-  useEffect(() => {
-    if (player.collided) {
       // 1. Merge piece into grid
       const newGrid = grid.map((row) => [...row]);
-      player.tetromino.forEach((row, y) => {
+      finalPlayer.tetromino.forEach((row, y) => {
         row.forEach((value, x) => {
           if (value !== 0) {
-            const gridY = y + player.pos.y;
-            const gridX = x + player.pos.x;
+            const gridY = y + finalPlayer.pos.y;
+            const gridX = x + finalPlayer.pos.x;
             if (
               gridY >= 0 &&
               gridY < BOARD_HEIGHT &&
               gridX >= 0 &&
               gridX < BOARD_WIDTH
             ) {
-              newGrid[gridY][gridX] = [player.color, "merged"];
+              newGrid[gridY][gridX] = [finalPlayer.color, "merged"];
             }
           }
         });
@@ -423,16 +395,38 @@ export const Tetris: React.FC = () => {
 
       setGrid(sweptGrid);
       resetPlayer();
+    },
+    [grid, level, resetPlayer],
+  );
+
+  const drop = () => {
+    // CHQ: Claude AI (Sonnet): Increase speed as levels progress
+    if (lines >= level * 10) {
+      setLevel((prev) => prev + 1);
+      setDropTime((prev) =>
+        prev ? Math.max(100, prev - 100) : INITIAL_DROP_TIME,
+      );
     }
-  }, [
-    player.collided,
-    player.pos,
-    player.tetromino,
-    player.color,
-    grid,
-    level,
-    resetPlayer,
-  ]);
+
+    if (!checkCollision(player, grid, { x: 0, y: 1 })) {
+      setPlayer((prev) => ({
+        ...prev,
+        pos: { x: prev.pos.x, y: prev.pos.y + 1 },
+      }));
+    } else {
+      lockPiece(player);
+    }
+  };
+
+  const hardDrop = () => {
+    let currentY = player.pos.y;
+    while (
+      !checkCollision(player, grid, { x: 0, y: currentY - player.pos.y + 1 })
+    ) {
+      currentY++;
+    }
+    lockPiece({ ...player, pos: { x: player.pos.x, y: currentY } });
+  };
 
   // Game Loop Ticker
   useEffect(() => {
