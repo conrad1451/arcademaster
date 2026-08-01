@@ -1,6 +1,8 @@
-// CHQ: Gemini AI generated
+// CHQ: Gemini AI scaffolded, and I edited heavily
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+
+import type { MouseEventHandler } from "react";
 
 // --- Constants & Config ---
 const BOARD_WIDTH = 10;
