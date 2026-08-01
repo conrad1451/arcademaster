@@ -1,6 +1,7 @@
-// CHQ: Gemini AI generated
+// CHQ: Gemini AI scaffolded, Claude AI (Sonnet) added a feature, and I edited heavily
+// Touch swipe support added for mobile play
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 type Board = number[][];
 type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
@@ -186,18 +187,45 @@ const NewGameButton = (props: { initGame: () => void }) => {
   );
 };
 
-const GameBoard = (props: {
-  gameOver: boolean;
-  initGame: () => void;
-  board: Board;
-}) => {
-  const { gameOver, initGame, board } = props;
+// CHQ: Claude AI (Sonnet): added a small hint so mobile players know the board is swipeable
+const SwipeHint = () => {
   return (
     <div
       style={{
+        marginTop: "10px",
+        fontSize: "13px",
+        color: "#9c9088",
+      }}
+    >
+      Swipe to move
+    </div>
+  );
+};
+
+// CHQ: Claude AI (Sonnet): added more props to GameBoard
+const GameBoard = React.forwardRef<
+  HTMLDivElement,
+  {
+    gameOver: boolean;
+    initGame: () => void;
+    board: Board;
+    onTouchStart: (e: React.TouchEvent) => void;
+    onTouchEnd: (e: React.TouchEvent) => void;
+  }
+>((props, ref) => {
+  const { gameOver, initGame, board, onTouchStart, onTouchEnd } = props;
+  return (
+    <div
+      ref={ref}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      style={{
         position: "relative",
         width: "340px",
+        maxWidth: "88vw",
         height: "340px",
+        // CHQ: Claude AI (Sonnet): keep the board square on narrow phone widths
+        aspectRatio: "1 / 1",
         margin: "0 auto",
         padding: "10px",
         backgroundColor: "#bbada0",
@@ -206,6 +234,9 @@ const GameBoard = (props: {
         gridTemplateColumns: "repeat(4, 1fr)",
         gridTemplateRows: "repeat(4, 1fr)",
         gap: "10px",
+        // CHQ: Claude AI (Sonnet): stops the browser from scrolling/refreshing the page
+        // while the user is swiping on the board
+        touchAction: "none",
       }}
     >
       {board.map((row, rIdx) =>
@@ -219,7 +250,8 @@ const GameBoard = (props: {
       {gameOver && <GameOverDisplay initGame={initGame} />}
     </div>
   );
-};
+});
+GameBoard.displayName = "GameBoard";
 
 // CHQ: Gemini AI: Helper function to create a ready-to-play initial board
 const createInitialBoard = (): Board => {
@@ -229,12 +261,19 @@ const createInitialBoard = (): Board => {
   return board;
 };
 
+// CHQ: Claude AI (Sonnet): minimum finger travel (px) before a touch counts as a swipe,
+// rather than an accidental tap/jiggle
+const SWIPE_THRESHOLD = 30;
+
 export const The2048Game: React.FC = () => {
   // CHQ: Gemini AI: replaced createEmptyBoard with a helper
   //      function createInitialBoard which gets called here
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [score, setScore] = useState<number>(0);
   const [gameOver, setGameOver] = useState<boolean>(false);
+
+  // CHQ: Claude AI (Sonnet): track where a touch started so we can measure the swipe on release
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // CHQ: Gemini AI: Reset handler for "New Game" and "Try Again" buttons
   const initGame = useCallback(() => {
@@ -312,6 +351,39 @@ export const The2048Game: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [move]);
 
+  // CHQ: Claude AI (Sonnet): record the starting touch point
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
+  // CHQ: Claude AI (Sonnet): compare the touch end point to the start point to figure out
+  // which direction the finger travelled furthest, then fire that move
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = touchStartRef.current;
+      if (!start) return;
+
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+
+      touchStartRef.current = null;
+
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_THRESHOLD) {
+        // too small to count as an intentional swipe
+        return;
+      }
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        move(dx > 0 ? "RIGHT" : "LEFT");
+      } else {
+        move(dy > 0 ? "DOWN" : "UP");
+      }
+    },
+    [move],
+  );
+
   return (
     <div
       style={{
@@ -322,7 +394,14 @@ export const The2048Game: React.FC = () => {
     >
       <h1>2048</h1>
       <ScoreBoard score={score} />
-      <GameBoard gameOver={gameOver} initGame={initGame} board={board} />
+      <GameBoard
+        gameOver={gameOver}
+        initGame={initGame}
+        board={board}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      />
+      <SwipeHint />
       <NewGameButton initGame={initGame} />
     </div>
   );
