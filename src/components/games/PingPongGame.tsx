@@ -1,4 +1,6 @@
-// CHQ: Gemini AI generated
+// CHQ: Gemini AI scaffolded, and I edited heavily
+// CHQ: Claude AI (Sonnet): Touch controls + responsive canvas sizing added for mobile
+
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
 // --- Types & Interfaces ---
@@ -22,13 +24,15 @@ interface Paddle {
 
 export const PingPongGame: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [scores, setScores] = useState<{ player: number; ai: number }>({
     player: 0,
     ai: 0,
   });
 
-  // Canvas Dimensions
+  // CHQ: Claude AI (Sonnet): Canvas Dimensions (internal drawing resolution - stays fixed;
+  // CSS scaling below is what makes it fit small phone screens)
   const CANVAS_WIDTH = 800;
   const CANVAS_HEIGHT = 500;
   const PADDLE_WIDTH = 12;
@@ -249,21 +253,47 @@ export const PingPongGame: React.FC = () => {
     };
   }, []);
 
-  // Mouse Control for Player Paddle
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isPlaying) return;
+  // CHQ: Claude AI (Sonnet): Shared helper - given a clientY from either a
+  // mouse or touch event, move the player paddle so it's centered on that
+  // point. The canvas is scaled down via CSS on small screens, so we convert
+  // using the canvas's *rendered* size, not the fixed internal CANVAS_HEIGHT,
+  // to keep touch tracking accurate at any screen size.
+  const movePaddleToClientY = useCallback((clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseY = e.clientY - rect.top;
+    const scaleY = CANVAS_HEIGHT / rect.height;
+    const y = (clientY - rect.top) * scaleY;
 
-    // Center paddle on mouse Y position
     const player = gameState.current.player;
     player.y = Math.max(
       0,
-      Math.min(CANVAS_HEIGHT - player.height, mouseY - player.height / 2),
+      Math.min(CANVAS_HEIGHT - player.height, y - player.height / 2),
     );
+  }, []);
+
+  // CHQ: Claude AI (Sonnet): Mouse Control for Player Paddle
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isPlaying) return;
+    movePaddleToClientY(e.clientY);
+  };
+
+  // CHQ: Claude AI (Sonnet): Touch controls - a finger drag on the canvas moves the paddle the
+  // same way the mouse does. preventDefault stops the page from scrolling
+  // while dragging on the canvas.
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isPlaying) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) movePaddleToClientY(touch.clientY);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isPlaying) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) movePaddleToClientY(touch.clientY);
   };
 
   const handleStart = () => {
@@ -300,12 +330,14 @@ export const PingPongGame: React.FC = () => {
       </div>
 
       {/* Game Canvas */}
-      <div style={styles.canvasWrapper}>
+      <div style={styles.canvasWrapper} ref={wrapperRef}>
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
           onMouseMove={handleMouseMove}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           style={styles.canvas}
         />
         {!isPlaying && (
@@ -314,7 +346,7 @@ export const PingPongGame: React.FC = () => {
               {scores.player === 0 && scores.ai === 0 ? "Start Game" : "Resume"}
             </button>
             <p style={styles.controlsHint}>
-              Use W/S, Up/Down Arrows, or Mouse to move
+              Use W/S, Up/Down Arrows, Mouse, or drag your finger to move
             </p>
           </div>
         )}
@@ -348,6 +380,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontFamily: "sans-serif",
     padding: "20px",
     borderRadius: "12px",
+    // CHQ: Claude AI (Sonnet): let the whole card shrink on narrow phone viewports
+    width: "100%",
+    maxWidth: "840px",
+    margin: "0 auto",
+    boxSizing: "border-box",
   },
   scoreboard: {
     display: "flex",
@@ -376,10 +413,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: "8px",
     overflow: "hidden",
     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+    // CHQ: Claude AI (Sonnet): cap the wrapper to the viewport width so the canvas below
+    // (which scales via width: 100%) never overflows on a phone
+    width: "100%",
+    maxWidth: `${800}px`,
   },
   canvas: {
     display: "block",
     cursor: "none",
+    // CHQ: Claude AI (Sonnet): scale the fixed-resolution canvas down to fit narrow screens
+    // while keeping its 800x500 aspect ratio intact
+    width: "100%",
+    height: "auto",
+    // CHQ: Claude AI (Sonnet): stop the browser from scrolling/zooming the page while
+    // dragging a finger across the canvas
+    touchAction: "none",
   },
   overlay: {
     position: "absolute",
@@ -392,6 +440,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
+    textAlign: "center",
+    padding: "0 16px",
+    boxSizing: "border-box",
   },
   startButton: {
     padding: "12px 28px",
