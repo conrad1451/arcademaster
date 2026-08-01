@@ -12,7 +12,7 @@ export const Game2048: React.FC = () => {
   const [score, setScore] = useState<number>(0);
   const [gameOver, setGameOver] = useState<boolean>(false);
 
-  // Initialize game on load
+  // CHQ: Gemini AI: Initialize game on load
   useEffect(() => {
     initGame();
   }, []);
@@ -22,8 +22,7 @@ export const Game2048: React.FC = () => {
       .fill(0)
       .map(() => Array(BOARD_SIZE).fill(0));
   }
-
-  // Add a random 2 or 4 to a free spot
+  // CHQ: Gemini AI: Add a random 2 or 4 to a free spot
   const addRandomTile = (currentBoard: Board): Board => {
     const emptyCells: [number, number][] = [];
     for (let r = 0; r < BOARD_SIZE; r++) {
@@ -49,7 +48,7 @@ export const Game2048: React.FC = () => {
     setGameOver(false);
   };
 
-  // Helper: Rotate board counter-clockwise
+  // CHQ: Gemini AI: Helper: Rotate board counter-clockwise
   const rotateLeft = (matrix: Board): Board => {
     const result = createEmptyBoard();
     for (let r = 0; r < BOARD_SIZE; r++) {
@@ -60,7 +59,7 @@ export const Game2048: React.FC = () => {
     return result;
   };
 
-  // Core slide and merge logic (operates leftward)
+  // CHQ: Gemini AI: Core slide and merge logic (operates leftward)
   const slideAndMergeRow = (
     row: number[],
   ): { newRow: number[]; gainedScore: number } => {
@@ -93,13 +92,13 @@ export const Game2048: React.FC = () => {
       let tempBoard = board.map((row) => [...row]);
       let totalGainedScore = 0;
 
-      // Rotate board so we always move "LEFT"
+      // CHQ: Gemini AI: Rotate board so we always move "LEFT"
       const rotations = { LEFT: 0, DOWN: 1, RIGHT: 2, UP: 3 }[direction];
       for (let i = 0; i < rotations; i++) {
         tempBoard = rotateLeft(tempBoard);
       }
 
-      // Process row sliding/merging
+      // CHQ: Gemini AI: Process row sliding/merging
       const nextBoard: Board = [];
       for (let r = 0; r < BOARD_SIZE; r++) {
         const { newRow, gainedScore } = slideAndMergeRow(tempBoard[r]);
@@ -108,12 +107,12 @@ export const Game2048: React.FC = () => {
       }
       tempBoard = nextBoard;
 
-      // Rotate back to original orientation
+      // CHQ: Gemini AI: Rotate back to original orientation
       for (let i = 0; i < (4 - rotations) % 4; i++) {
         tempBoard = rotateLeft(tempBoard);
       }
 
-      // Check if board changed
+      // CHQ: Gemini AI: Check if board changed
       const hasChanged = JSON.stringify(board) !== JSON.stringify(tempBoard);
 
       if (hasChanged) {
@@ -168,7 +167,7 @@ export const Game2048: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [move]);
 
-  // Color mapping for classic 2048 styling
+  // CHQ: Gemini AI: Color mapping for classic 2048 styling
   const getTileStyle = (value: number): React.CSSProperties => {
     const colors: Record<number, { bg: string; text: string }> = {
       2: { bg: "#eee4da", text: "#776e65" },
