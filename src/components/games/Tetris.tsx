@@ -117,6 +117,151 @@ const checkCollision = (
   return false;
 };
 
+// --- Helper Components ---
+
+const GameBoard = (props: { displayGrid: Cell[][] }) => {
+  const { displayGrid } = props;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateRows: `repeat(${BOARD_HEIGHT}, 24px)`,
+        gridTemplateColumns: `repeat(${BOARD_WIDTH}, 24px)`,
+        gap: "1px",
+        backgroundColor: "#333",
+        border: "3px solid #555",
+        borderRadius: "4px",
+        padding: "2px",
+      }}
+    >
+      {displayGrid.map((row, rIdx) =>
+        row.map(([color], cIdx) => (
+          <div
+            key={`${rIdx}-${cIdx}`}
+            style={{
+              width: "24px",
+              height: "24px",
+              backgroundColor: color !== "#000000" ? color : "#111111",
+              borderRadius: "2px",
+              boxShadow:
+                color !== "#000000"
+                  ? "inset 2px 2px 4px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.4)"
+                  : "none",
+            }}
+          />
+        )),
+      )}
+    </div>
+  );
+};
+
+const Score = (props: { score: number }) => {
+  const { score } = props;
+
+  return (
+    <div
+      style={{
+        background: "#2a2a2a",
+        padding: "10px",
+        borderRadius: "4px",
+      }}
+    >
+      <div>SCORE</div>
+      <div style={{ fontSize: "20px", fontWeight: "bold" }}>{score}</div>
+    </div>
+  );
+};
+
+const Lines = (props: { lines: number }) => {
+  const { lines } = props;
+
+  return (
+    <div
+      style={{
+        background: "#2a2a2a",
+        padding: "10px",
+        borderRadius: "4px",
+      }}
+    >
+      <div>LINES</div>
+      <div style={{ fontSize: "20px", fontWeight: "bold" }}>{lines}</div>
+    </div>
+  );
+};
+
+const LevelIndicator = (props: { level: number }) => {
+  const { level } = props;
+  return (
+    <div
+      style={{
+        background: "#2a2a2a",
+        padding: "10px",
+        borderRadius: "4px",
+      }}
+    >
+      <div>LEVEL</div>
+      <div style={{ fontSize: "20px", fontWeight: "bold" }}>{level}</div>
+    </div>
+  );
+};
+
+const GameOverScreen = () => {
+  return (
+    <div
+      style={{
+        color: "#ff4d4d",
+        fontWeight: "bold",
+        textAlign: "center",
+      }}
+    >
+      GAME OVER
+    </div>
+  );
+};
+
+const StartGameButton = (props: {
+  startGame: MouseEventHandler<HTMLButtonElement>;
+  gameOver: boolean;
+}) => {
+  const { startGame, gameOver } = props;
+  return (
+    <button
+      onClick={startGame}
+      style={{
+        padding: "10px",
+        fontSize: "14px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        backgroundColor: "#00f0f0",
+        border: "none",
+        borderRadius: "4px",
+        color: "#000",
+      }}
+    >
+      {gameOver ? "RETRY" : "START / RESET"}
+    </button>
+  );
+};
+
+const ControlsHints = () => {
+  return (
+    <div
+      style={{
+        marginTop: "20px",
+        fontSize: "12px",
+        color: "#888",
+        textAlign: "center",
+      }}
+    >
+      <p>
+        Controls: ⬅️ / ➡️ to Move | ⬆️ to Rotate | ⬇️ to Soft Drop | Space to
+        Hard Drop
+      </p>
+      <p>Click on the game area to ensure keyboard focus.</p>
+    </div>
+  );
+};
+
 // --- Main Component ---
 export const Tetris: React.FC = () => {
   const [grid, setGrid] = useState<Grid>(createEmptyGrid());
@@ -355,36 +500,7 @@ export const Tetris: React.FC = () => {
 
       <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
         {/* Game Board */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateRows: `repeat(${BOARD_HEIGHT}, 24px)`,
-            gridTemplateColumns: `repeat(${BOARD_WIDTH}, 24px)`,
-            gap: "1px",
-            backgroundColor: "#333",
-            border: "3px solid #555",
-            borderRadius: "4px",
-            padding: "2px",
-          }}
-        >
-          {displayGrid.map((row, rIdx) =>
-            row.map(([color], cIdx) => (
-              <div
-                key={`${rIdx}-${cIdx}`}
-                style={{
-                  width: "24px",
-                  height: "24px",
-                  backgroundColor: color !== "#000000" ? color : "#111111",
-                  borderRadius: "2px",
-                  boxShadow:
-                    color !== "#000000"
-                      ? "inset 2px 2px 4px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.4)"
-                      : "none",
-                }}
-              />
-            )),
-          )}
-        </div>
+        <GameBoard displayGrid={displayGrid} />
 
         {/* Sidebar Info */}
         <div
@@ -395,84 +511,20 @@ export const Tetris: React.FC = () => {
             minWidth: "120px",
           }}
         >
-          <div
-            style={{
-              background: "#2a2a2a",
-              padding: "10px",
-              borderRadius: "4px",
-            }}
-          >
-            <div>SCORE</div>
-            <div style={{ fontSize: "20px", fontWeight: "bold" }}>{score}</div>
-          </div>
+          <Score score={score} />
 
-          <div
-            style={{
-              background: "#2a2a2a",
-              padding: "10px",
-              borderRadius: "4px",
-            }}
-          >
-            <div>LINES</div>
-            <div style={{ fontSize: "20px", fontWeight: "bold" }}>{lines}</div>
-          </div>
+          <Lines lines={lines} />
 
-          <div
-            style={{
-              background: "#2a2a2a",
-              padding: "10px",
-              borderRadius: "4px",
-            }}
-          >
-            <div>LEVEL</div>
-            <div style={{ fontSize: "20px", fontWeight: "bold" }}>{level}</div>
-          </div>
+          <LevelIndicator level={level} />
 
-          <button
-            onClick={startGame}
-            style={{
-              padding: "10px",
-              fontSize: "14px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              backgroundColor: "#00f0f0",
-              border: "none",
-              borderRadius: "4px",
-              color: "#000",
-            }}
-          >
-            {gameOver ? "RETRY" : "START / RESET"}
-          </button>
+          <StartGameButton startGame={startGame} gameOver={gameOver} />
 
-          {gameOver && (
-            <div
-              style={{
-                color: "#ff4d4d",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              GAME OVER
-            </div>
-          )}
+          {gameOver && <GameOverScreen />}
         </div>
       </div>
 
       {/* Controls Hint */}
-      <div
-        style={{
-          marginTop: "20px",
-          fontSize: "12px",
-          color: "#888",
-          textAlign: "center",
-        }}
-      >
-        <p>
-          Controls: ⬅️ / ➡️ to Move | ⬆️ to Rotate | ⬇️ to Soft Drop | Space to
-          Hard Drop
-        </p>
-        <p>Click on the game area to ensure keyboard focus.</p>
-      </div>
+      <ControlsHints />
     </div>
   );
 };
