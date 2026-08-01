@@ -251,7 +251,7 @@ export const The2048Game: React.FC = () => {
       let totalGainedScore = 0;
 
       // CHQ: Gemini AI: Rotate board so we always move "LEFT"
-      const rotations = { LEFT: 0, DOWN: 1, RIGHT: 2, UP: 3 }[direction];
+      const rotations = { LEFT: 0, DOWN: 3, RIGHT: 2, UP: 1 }[direction];
       for (let i = 0; i < rotations; i++) {
         tempBoard = rotateLeft(tempBoard);
       }
