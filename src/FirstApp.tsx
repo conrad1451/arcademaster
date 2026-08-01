@@ -3,23 +3,10 @@ import { Button, Box, Typography } from "@mui/material";
 
 import PingPongGame from "./components/games/PingPongGame";
 import { The2048Game } from "./components/games/2048Game";
-
+import Tetris from "./components/games/Tetris";
 export interface NavigationButtonsProps {
   navigate: (path: string) => void;
 }
-
-const SamplePage: React.FC = () => (
-  <Box sx={{ p: 4, textAlign: "center" }}>
-    <Typography variant="h4" color="primary">
-      Original Sample Page
-    </Typography>
-
-    {/* CHQ: Gemini AI wrapped mt in sx */}
-    <Typography variant="body1" sx={{ mt: 2 }}>
-      This is a placeholder for your original content.
-    </Typography>
-  </Box>
-);
 
 // --- END: Placeholder Components ---
 
@@ -28,14 +15,14 @@ const SamplePage: React.FC = () => (
 const NavigationButtons: React.FC<NavigationButtonsProps> = ({ navigate }) => {
   return (
     <Box sx={{ display: "flex", gap: 2, justifyContent: "center", p: 4 }}>
-      <Button variant="contained" onClick={() => navigate("/orig")}>
-        Go to original page
-      </Button>
       <Button variant="contained" onClick={() => navigate("/pingpong")}>
         Go to Ping Pong game
       </Button>
       <Button variant="contained" onClick={() => navigate("/the-2048-game")}>
         Go to the 2048 game
+      </Button>
+      <Button variant="contained" onClick={() => navigate("/tetris")}>
+        Go to Tetris game
       </Button>
     </Box>
   );
@@ -52,8 +39,8 @@ function FirstApp() {
   let content;
 
   switch (currentPath) {
-    case "/orig":
-      content = <SamplePage />;
+    case "/tetris":
+      content = <Tetris />;
       break;
 
     case "/pingpong":
