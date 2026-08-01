@@ -8,6 +8,9 @@ import type { MouseEventHandler } from "react";
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const INITIAL_DROP_TIME = 800; // ms per tick
+// CHQ: Claude AI (Sonnet): cell size shrinks on narrow phone screens via the min() below,
+// but never grows past this on desktop
+const CELL_SIZE = "min(24px, 7.5vw)";
 
 // Tetromino definitions (Shape matrices & hex colors)
 const TETROMINOES = {
@@ -126,8 +129,8 @@ const GameBoard = (props: { displayGrid: Cell[][] }) => {
     <div
       style={{
         display: "grid",
-        gridTemplateRows: `repeat(${BOARD_HEIGHT}, 24px)`,
-        gridTemplateColumns: `repeat(${BOARD_WIDTH}, 24px)`,
+        gridTemplateRows: `repeat(${BOARD_HEIGHT}, ${CELL_SIZE})`,
+        gridTemplateColumns: `repeat(${BOARD_WIDTH}, ${CELL_SIZE})`,
         gap: "1px",
         backgroundColor: "#333",
         border: "3px solid #555",
@@ -140,8 +143,12 @@ const GameBoard = (props: { displayGrid: Cell[][] }) => {
           <div
             key={`${rIdx}-${cIdx}`}
             style={{
-              width: "24px",
-              height: "24px",
+              // CHQ: Claude AI (Sonnet): fill whatever size the grid
+              // track ends up being (driven by CELL_SIZE) instead of
+              // a fixed pixel size, so the board shrinks to fit
+              // narrow phone screens
+              width: "100%",
+              height: "100%",
               backgroundColor: color !== "#000000" ? color : "#111111",
               borderRadius: "2px",
               boxShadow:
@@ -258,7 +265,83 @@ const ControlsHints = () => {
         Controls: ⬅️ / ➡️ to Move | ⬆️ to Rotate | ⬇️ to Soft Drop | Space to
         Hard Drop
       </p>
-      <p>Click on the game area to ensure keyboard focus.</p>
+      <p>
+        Click on the game area to ensure keyboard focus, or use the on-screen
+        buttons below on touch devices.
+      </p>
+    </div>
+  );
+};
+
+// CHQ: Claude AI (Sonnet): On-screen D-pad for phones/tablets,
+// since there's no keyboard. Buttons use onClick (which
+// touchscreens fire fine) plus touchAction: "manipulation"
+// so there's no ~300ms tap delay.
+const TouchControls = (props: {
+  onLeft: () => void;
+  onRight: () => void;
+  onRotate: () => void;
+  onSoftDrop: () => void;
+  onHardDrop: () => void;
+}) => {
+  const { onLeft, onRight, onRotate, onSoftDrop, onHardDrop } = props;
+
+  const buttonStyle: React.CSSProperties = {
+    fontSize: "20px",
+    fontWeight: "bold",
+    padding: "16px",
+    minWidth: "56px",
+    minHeight: "56px",
+    backgroundColor: "#2a2a2a",
+    color: "#fff",
+    border: "1px solid #444",
+    borderRadius: "8px",
+    cursor: "pointer",
+    touchAction: "manipulation",
+    WebkitTapHighlightColor: "transparent",
+    userSelect: "none",
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: "16px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "10px",
+      }}
+    >
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button style={buttonStyle} onClick={onRotate} aria-label="Rotate">
+          ⟳
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button style={buttonStyle} onClick={onLeft} aria-label="Move left">
+          ⬅️
+        </button>
+        <button style={buttonStyle} onClick={onSoftDrop} aria-label="Soft drop">
+          ⬇️
+        </button>
+        <button style={buttonStyle} onClick={onRight} aria-label="Move right">
+          ➡️
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button
+          style={{
+            ...buttonStyle,
+            minWidth: "180px",
+            backgroundColor: "#00f0f0",
+            color: "#000",
+          }}
+          onClick={onHardDrop}
+          aria-label="Hard drop"
+        >
+          HARD DROP
+        </button>
+      </div>
     </div>
   );
 };
@@ -490,11 +573,23 @@ export const Tetris: React.FC = () => {
         color: "#ffffff",
         fontFamily: "monospace, sans-serif",
         outline: "none",
+        padding: "10px",
+        boxSizing: "border-box",
       }}
     >
       <h1 style={{ marginBottom: "10px" }}>TETRIS</h1>
 
-      <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          alignItems: "flex-start",
+          // CHQ: let the sidebar wrap below the board on narrow phones
+          // instead of squeezing everything into one row
+          flexWrap: "wrap",
+          justifyContent: "center",
+        }}
+      >
         {/* Game Board */}
         <GameBoard displayGrid={displayGrid} />
 
@@ -518,6 +613,17 @@ export const Tetris: React.FC = () => {
           {gameOver && <GameOverScreen />}
         </div>
       </div>
+
+      {/* CHQ: Claude AI (Sonnet): Touch controls - only
+          useful on touch devices, but harmless
+          (just extra buttons) if shown on desktop too */}
+      <TouchControls
+        onLeft={() => !gameOver && movePlayer(-1)}
+        onRight={() => !gameOver && movePlayer(1)}
+        onRotate={() => !gameOver && playerRotate()}
+        onSoftDrop={() => !gameOver && drop()}
+        onHardDrop={() => !gameOver && hardDrop()}
+      />
 
       {/* Controls Hint */}
       <ControlsHints />
