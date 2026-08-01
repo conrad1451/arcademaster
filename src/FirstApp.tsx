@@ -37,7 +37,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ navigate }) => {
   );
 };
 
-function App() {
+function FirstApp() {
   const [currentPath, setCurrentPath] = useState<string>("/");
 
   // Function to simulate navigation (replaces useNavigate)
@@ -104,4 +104,4 @@ function App() {
   );
 }
 
-export default App;
+export default FirstApp;
