@@ -20,6 +20,9 @@ import type { RootState } from "./store";
 import PingPongGame from "./components/games/PingPongGame";
 import { The2048Game } from "./components/games/2048Game";
 import Tetris from "./components/games/Tetris";
+
+import Leaderboard from "./components/pages/Leaderboard";
+
 export interface NavigationButtonsProps {
   navigate: (path: string) => void;
 }
@@ -134,6 +137,13 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ navigate }) => {
       <Button variant="contained" onClick={() => navigate("/tetris")}>
         Go to Tetris game
       </Button>
+      <Button
+        variant="contained"
+        color="success"
+        onClick={() => navigate("/leaderboard")}
+      >
+        View Leaderboard
+      </Button>
     </Box>
   );
 };
@@ -179,7 +189,9 @@ function FirstApp() {
     case "/the-2048-game":
       // content = <The2048Game />;
       content = <The2048Game username={username} />; // Pass username prop
-
+      break;
+    case "/leaderboard":
+      content = <Leaderboard />;
       break;
 
     case "/":
