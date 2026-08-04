@@ -38,8 +38,6 @@ export const PingPongGame: React.FC<GameProps> = ({ username = "Guest" }) => {
     ai: 0,
   });
 
-  const bro = username;
-
   // CHQ: Claude AI (Sonnet): Canvas Dimensions (internal drawing resolution - stays fixed;
   // CSS scaling below is what makes it fit small phone screens)
   const CANVAS_WIDTH = 800;
