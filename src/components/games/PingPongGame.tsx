@@ -2,7 +2,7 @@
 // CHQ: Claude AI (Sonnet): Touch controls + responsive canvas sizing added for mobile
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-// import { submitScore } from "../../utils/submitScore";
+import { submitScore } from "../../utils/submitScore";
 
 // --- Types & Interfaces ---
 interface Ball {
@@ -26,6 +26,8 @@ interface Paddle {
 interface GameProps {
   username?: string;
 }
+
+const WIN_SCORE = 10;
 
 export const PingPongGame: React.FC<GameProps> = ({ username = "Guest" }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -165,19 +167,34 @@ export const PingPongGame: React.FC<GameProps> = ({ username = "Guest" }) => {
       ball.vy = ball.speed * Math.sin(bounceAngle);
     }
 
+    // CHQ: ChatGPT added WIN_SCORE and conditonals to check for
+    //      a win when both the player and the computer (the ai) score
     // 6. Scoring Check
     if (ball.x - ball.radius < 0) {
       // AI Scores
       ai.score += 1;
       setScores({ player: player.score, ai: ai.score });
+
+      if (ai.score >= WIN_SCORE) {
+        setIsPlaying(false);
+        return;
+      }
+
       resetBall("ai");
     } else if (ball.x + ball.radius > CANVAS_WIDTH) {
       // Player Scores
       player.score += 1;
       setScores({ player: player.score, ai: ai.score });
+
+      if (player.score >= WIN_SCORE) {
+        setIsPlaying(false);
+        submitScore(username, "PING_PONG", player.score);
+        return;
+      }
+
       resetBall("player");
     }
-  }, [resetBall]);
+  }, [resetBall, username]);
 
   // Render logic (Canvas Drawing)
   const draw = useCallback((ctx: CanvasRenderingContext2D) => {
