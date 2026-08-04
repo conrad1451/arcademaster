@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 
 import type { MouseEventHandler } from "react";
+import { submitScore } from "../../utils/submitScore"; // CHQ: I import and use this
+interface GameProps {
+  username?: string;
+}
 
 // --- Constants & Config ---
 const BOARD_WIDTH = 10;
@@ -347,7 +351,7 @@ const TouchControls = (props: {
 };
 
 // --- Main Component ---
-export const Tetris: React.FC = () => {
+export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   const [grid, setGrid] = useState<Grid>(createEmptyGrid());
   const [score, setScore] = useState<number>(0);
   const [lines, setLines] = useState<number>(0);
@@ -429,6 +433,7 @@ export const Tetris: React.FC = () => {
       // Game Over condition (collided at top)
       if (finalPlayer.pos.y < 1) {
         setGameOver(true);
+        submitScore(username, "TETRIS", score);
         setDropTime(null);
         return;
       }
@@ -479,7 +484,7 @@ export const Tetris: React.FC = () => {
       setGrid(sweptGrid);
       resetPlayer();
     },
-    [grid, level, resetPlayer],
+    [grid, level, resetPlayer, score, username],
   );
 
   const drop = () => {

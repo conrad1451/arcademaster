@@ -3,8 +3,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
+import { submitScore } from "../../utils/submitScore";
 type Board = number[][];
 type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
+
+interface GameProps {
+  username?: string;
+}
 
 const BOARD_SIZE = 4;
 
@@ -265,7 +270,21 @@ const createInitialBoard = (): Board => {
 // rather than an accidental tap/jiggle
 const SWIPE_THRESHOLD = 30;
 
-export const The2048Game: React.FC = () => {
+// async function submitScore(
+//   username: string,
+//   gameType: "GAME_2048" | "PING_PONG" | "TETRIS",
+//   score: number,
+// ) {
+//   const baseUrl = import.meta.env.VITE_API_URL;
+
+//   await fetch(baseUrl + "/api/scores", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ username, gameType, score }),
+//   });
+// }
+
+export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
   // CHQ: Gemini AI: replaced createEmptyBoard with a helper
   //      function createInitialBoard which gets called here
   const [board, setBoard] = useState<Board>(createInitialBoard);
@@ -312,17 +331,21 @@ export const The2048Game: React.FC = () => {
       // CHQ: Gemini AI: Check if board changed
       const hasChanged = JSON.stringify(board) !== JSON.stringify(tempBoard);
 
+      // CHQ: ChatGPT fixed score submission using stale score
       if (hasChanged) {
         const updatedBoard = addRandomTile(tempBoard);
         setBoard(updatedBoard);
-        setScore((prev) => prev + totalGainedScore);
+
+        const finalScore = score + totalGainedScore;
+        setScore(finalScore);
 
         if (checkGameOver(updatedBoard)) {
           setGameOver(true);
+          submitScore(username, "GAME_2048", finalScore);
         }
       }
     },
-    [board, gameOver],
+    [board, gameOver, score, username],
   );
 
   useEffect(() => {

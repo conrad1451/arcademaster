@@ -2,6 +2,7 @@
 // CHQ: Claude AI (Sonnet): Touch controls + responsive canvas sizing added for mobile
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+// import { submitScore } from "../../utils/submitScore";
 
 // --- Types & Interfaces ---
 interface Ball {
@@ -22,7 +23,11 @@ interface Paddle {
   speed: number;
 }
 
-export const PingPongGame: React.FC = () => {
+interface GameProps {
+  username?: string;
+}
+
+export const PingPongGame: React.FC<GameProps> = ({ username = "Guest" }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -30,6 +35,8 @@ export const PingPongGame: React.FC = () => {
     player: 0,
     ai: 0,
   });
+
+  const bro = username;
 
   // CHQ: Claude AI (Sonnet): Canvas Dimensions (internal drawing resolution - stays fixed;
   // CSS scaling below is what makes it fit small phone screens)
@@ -39,7 +46,6 @@ export const PingPongGame: React.FC = () => {
   const PADDLE_HEIGHT = 90;
   const BALL_RADIUS = 8;
   const INITIAL_BALL_SPEED = 6;
-
   // Mutable Game State in Ref to avoid stale closures in requestAnimationFrame
   const gameState = useRef<{
     ball: Ball;
