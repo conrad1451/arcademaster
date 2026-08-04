@@ -45,8 +45,11 @@ const UsernameDiaglog = (props: {
   return (
     <Dialog
       open={showUsernameDialog}
-      onClose={() => {}}
-      disableEscapeKeyDown
+      onClose={(_, reason) => {
+        if (reason === "backdropClick" || reason === "escapeKeyDown") {
+          return;
+        }
+      }}
       maxWidth="sm"
       fullWidth
     >
