@@ -1,4 +1,6 @@
-// CHQ: Claude AI (Haiku) scaffoled
+// CHQ: Claude AI (Haiku) scaffolded
+// CHQ: Claude AI (Sonnet): switched to per-game-type fetch to match actual backend API,
+// refetches on tab change, updatedAt instead of createdAt
 
 import React, { useState, useEffect } from "react";
 import {
@@ -21,7 +23,7 @@ interface Score {
   username: string;
   gameType: "GAME_2048" | "PING_PONG" | "TETRIS";
   score: number;
-  createdAt: string;
+  updatedAt: string;
 }
 
 type GameTab = "GAME_2048" | "PING_PONG" | "TETRIS";
@@ -39,30 +41,40 @@ export const Leaderboard: React.FC = () => {
 
   const baseUrl = import.meta.env.VITE_API_URL;
 
+  // CHQ: Claude AI (Sonnet): backend only exposes GET /api/scores/game/{gameType},
+  // there's no bulk "all scores" endpoint - so fetch per active tab instead of once
   useEffect(() => {
+    let cancelled = false;
+
     const fetchScores = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${baseUrl}/api/scores`);
+        const response = await fetch(`${baseUrl}/api/scores/game/${activeTab}`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch scores: ${response.status}`);
         }
 
         const data: Score[] = await response.json();
-        setScores(data);
+        if (!cancelled) setScores(data);
       } catch (error) {
         console.error("❌ Error fetching scores:", error);
+        if (!cancelled) setScores([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchScores();
-  }, [baseUrl]);
 
-  const filteredScores = scores
-    .filter((score) => score.gameType === activeTab)
+    return () => {
+      cancelled = true;
+    };
+  }, [baseUrl, activeTab]);
+
+  // CHQ: Claude AI (Sonnet): backend already returns highest-score-first per the README,
+  // but sort defensively client-side too in case that ever changes
+  const sortedScores = [...scores]
     .sort((a, b) => b.score - a.score)
     .slice(0, 100);
 
@@ -92,7 +104,7 @@ export const Leaderboard: React.FC = () => {
           <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : filteredScores.length === 0 ? (
+        ) : sortedScores.length === 0 ? (
           <Box sx={{ p: 4, textAlign: "center" }}>
             <Typography color="textSecondary">
               No scores yet for {gameLabels[activeTab]}. Play a game to get on
@@ -112,12 +124,12 @@ export const Leaderboard: React.FC = () => {
                     Score
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                    Date
+                    Last Updated
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredScores.map((score, index) => (
+                {sortedScores.map((score, index) => (
                   <TableRow
                     key={score.id}
                     sx={{
@@ -146,7 +158,7 @@ export const Leaderboard: React.FC = () => {
                       {score.score.toLocaleString()}
                     </TableCell>
                     <TableCell align="right">
-                      {new Date(score.createdAt).toLocaleDateString()}
+                      {new Date(score.updatedAt).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
                 ))}
