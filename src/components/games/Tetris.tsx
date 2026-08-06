@@ -255,23 +255,22 @@ const StartGameButton = (props: {
   );
 };
 
+// CHQ: Claude AI (Sonnet): trimmed to a single line - the old second
+// paragraph about clicking to focus was dead advice on touch devices
+// and was one of several things pushing content below the fold on
+// short mobile screens
 const ControlsHints = () => {
   return (
     <div
       style={{
-        marginTop: "20px",
+        marginTop: "12px",
         fontSize: "12px",
         color: "#888",
         textAlign: "center",
       }}
     >
-      <p>
-        Controls: ⬅️ / ➡️ to Move | ⬆️ to Rotate | ⬇️ to Soft Drop | Space to
-        Hard Drop
-      </p>
-      <p>
-        Click on the game area to ensure keyboard focus, or use the on-screen
-        buttons below on touch devices.
+      <p style={{ margin: 0 }}>
+        Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop
       </p>
     </div>
   );
@@ -281,6 +280,9 @@ const ControlsHints = () => {
 // since there's no keyboard. Buttons use onClick (which
 // touchscreens fire fine) plus touchAction: "manipulation"
 // so there's no ~300ms tap delay.
+// CHQ: Claude AI (Sonnet): shrank button size/gaps (56px->44px,
+// 10px->6px gaps) - this was one of the biggest contributors to
+// the whole layout not fitting on a phone screen without scrolling
 const TouchControls = (props: {
   onLeft: () => void;
   onRight: () => void;
@@ -291,11 +293,11 @@ const TouchControls = (props: {
   const { onLeft, onRight, onRotate, onSoftDrop, onHardDrop } = props;
 
   const buttonStyle: React.CSSProperties = {
-    fontSize: "20px",
+    fontSize: "18px",
     fontWeight: "bold",
-    padding: "16px",
-    minWidth: "56px",
-    minHeight: "56px",
+    padding: "12px",
+    minWidth: "44px",
+    minHeight: "44px",
     backgroundColor: "#2a2a2a",
     color: "#fff",
     border: "1px solid #444",
@@ -309,19 +311,19 @@ const TouchControls = (props: {
   return (
     <div
       style={{
-        marginTop: "16px",
+        marginTop: "12px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "10px",
+        gap: "6px",
       }}
     >
-      <div style={{ display: "flex", gap: "10px" }}>
+      <div style={{ display: "flex", gap: "6px" }}>
         <button style={buttonStyle} onClick={onRotate} aria-label="Rotate">
           ⟳
         </button>
       </div>
-      <div style={{ display: "flex", gap: "10px" }}>
+      <div style={{ display: "flex", gap: "6px" }}>
         <button style={buttonStyle} onClick={onLeft} aria-label="Move left">
           ⬅️
         </button>
@@ -332,11 +334,11 @@ const TouchControls = (props: {
           ➡️
         </button>
       </div>
-      <div style={{ display: "flex", gap: "10px" }}>
+      <div style={{ display: "flex", gap: "6px" }}>
         <button
           style={{
             ...buttonStyle,
-            minWidth: "180px",
+            minWidth: "160px",
             backgroundColor: "#00f0f0",
             color: "#000",
           }}
@@ -572,8 +574,12 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
+        // CHQ: Claude AI (Sonnet): was minHeight: "100vh" - Tetris now
+        // renders *inside* FirstApp's own full-viewport wrapper (plus a
+        // "Back to Home" button above it), so forcing another full
+        // viewport height here just pushed everything below the fold on
+        // mobile. Let content size itself naturally instead.
+        minHeight: "auto",
         backgroundColor: "#1a1a1a",
         color: "#ffffff",
         fontFamily: "monospace, sans-serif",
@@ -582,7 +588,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         boxSizing: "border-box",
       }}
     >
-      <h1 style={{ marginBottom: "10px" }}>TETRIS</h1>
+      <h1 style={{ margin: "0 0 10px 0", fontSize: "24px" }}>TETRIS</h1>
 
       <div
         style={{
@@ -599,39 +605,42 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         <GameBoard displayGrid={displayGrid} />
 
         {/* Sidebar Info */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "15px",
-            minWidth: "120px",
-          }}
-        >
-          <Score score={score} />
 
-          <Lines lines={lines} />
+        <div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              minWidth: "120px",
+            }}
+          >
+            <Score score={score} />
 
-          <LevelIndicator level={level} />
+            <Lines lines={lines} />
 
-          <StartGameButton startGame={startGame} gameOver={gameOver} />
+            <LevelIndicator level={level} />
 
-          {gameOver && <GameOverScreen />}
-        </div>
-      </div>
+            <StartGameButton startGame={startGame} gameOver={gameOver} />
 
-      {/* CHQ: Claude AI (Sonnet): Touch controls - only
+            {gameOver && <GameOverScreen />}
+          </div>
+
+          {/* CHQ: Claude AI (Sonnet): Touch controls - only
           useful on touch devices, but harmless
           (just extra buttons) if shown on desktop too */}
-      <TouchControls
-        onLeft={() => !gameOver && movePlayer(-1)}
-        onRight={() => !gameOver && movePlayer(1)}
-        onRotate={() => !gameOver && playerRotate()}
-        onSoftDrop={() => !gameOver && drop()}
-        onHardDrop={() => !gameOver && hardDrop()}
-      />
+          <TouchControls
+            onLeft={() => !gameOver && movePlayer(-1)}
+            onRight={() => !gameOver && movePlayer(1)}
+            onRotate={() => !gameOver && playerRotate()}
+            onSoftDrop={() => !gameOver && drop()}
+            onHardDrop={() => !gameOver && hardDrop()}
+          />
 
-      {/* Controls Hint */}
-      <ControlsHints />
+          {/* Controls Hint */}
+          <ControlsHints />
+        </div>
+      </div>
     </div>
   );
 };

@@ -94,8 +94,8 @@ const MainApp = (props: {
       sx={{
         fontFamily: "Inter",
         bgcolor: "#f4f7f9",
-        minHeight: "100vh",
-        minWidth: "100vw",
+        flex: 1, // fill #root's remaining space, instead of redeclaring full height
+        width: "100%", // was minWidth: "100vw" / width: "100%" attempt — no viewport units
         display: "flex",
         justifyContent: "center",
       }}
