@@ -157,16 +157,19 @@ const MainApp = (props: {
           pt: 4,
         }}
       >
-        {currentPath !== "/" && (
-          <Button
-            onClick={() => navigate("/")}
-            sx={{ mb: 2, ml: 2 }}
-            variant="text"
-          >
-            ← Back to Home
-          </Button>
-        )}
-        {<ServerPinger />}
+        <>
+          {currentPath === "/" ? (
+            <ServerPinger />
+          ) : (
+            <Button
+              onClick={() => navigate("/")}
+              sx={{ mb: 2, ml: 2 }}
+              variant="text"
+            >
+              ← Back to Home
+            </Button>
+          )}
+        </>
         {content}
       </Box>
     </Box>
