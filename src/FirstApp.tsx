@@ -1,6 +1,6 @@
 // src/FirstApp.tsx
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import {
   Button,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress,
 } from "@mui/material";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -82,6 +83,56 @@ const UsernameDiaglog = (props: {
   );
 };
 
+const ServerPinger = () => {
+  // CHQ: Claude AI (Sonnet) changed status from a boolean to an
+  //      ennumeration to handle loading, failure and success states
+  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+  const baseUrl = import.meta.env.VITE_API_URL;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const wakeServer = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/api/health`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to reach server: ${response.status}`);
+        }
+        if (!cancelled) setStatus("ok");
+      } catch (error) {
+        console.error("❌ Error connecting to server:", error);
+        if (!cancelled) setStatus("error"); // CHQ: Claude AI (Sonnet) added
+      }
+    };
+
+    wakeServer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baseUrl]);
+
+  return (
+    // CHQ: Claude AI (Sonnet) added error state handling
+    <>
+      {status === "loading" ? (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : status === "error" ? (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <p>⚠️ Can't reach the server right now. Try again shortly.</p>
+        </Box>
+      ) : (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <p>Server is awake! Commence to Gaming!</p>
+        </Box>
+      )}
+    </>
+  );
+};
+
 // CHQ: ChatGPT added navigate as a prop
 const MainApp = (props: {
   currentPath: string;
@@ -115,6 +166,7 @@ const MainApp = (props: {
             ← Back to Home
           </Button>
         )}
+        {<ServerPinger />}
         {content}
       </Box>
     </Box>
