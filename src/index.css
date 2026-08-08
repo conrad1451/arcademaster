@@ -125,3 +125,17 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* CHQ: Gemini AI gave footer formatting */
+.footer {
+  background: #00142e;
+  height: 50px;
+  color: rgb(228, 234, 246);
+  min-height: 10vh;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between; /* Optional: spaces them out */
+  gap: 10px; /* Optional: adds space between items */
+  padding: 0 2.5vw;
+  /* padding: 1.2vw; */
+}

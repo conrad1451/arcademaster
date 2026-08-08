@@ -23,6 +23,9 @@ import { The2048Game } from "./components/games/2048Game";
 import Tetris from "./components/games/Tetris";
 
 import Leaderboard from "./components/pages/Leaderboard";
+import PrivacyPolicy from "./components/pages/PrivacyPolicy";
+import TermsOfUse from "./components/pages/TermsOfUse";
+import Disclaimer from "./components/pages/Disclaimer";
 
 export interface NavigationButtonsProps {
   navigate: (path: string) => void;
@@ -171,6 +174,14 @@ const MainApp = (props: {
           )}
         </>
         {content}
+        {/* CHQ: Claude AI (Sonnet) fixed navigating to pages */}
+        <div>
+          <div className="footer">
+            <Button onClick={() => navigate("/terms")}>Terms of Use</Button>
+            <Button onClick={() => navigate("/privacy")}>Privacy Policy</Button>
+            <Button onClick={() => navigate("/disclaimer")}>Disclaimer</Button>
+          </div>
+        </div>
       </Box>
     </Box>
   );
@@ -247,6 +258,15 @@ function FirstApp() {
       break;
     case "/leaderboard":
       content = <Leaderboard />;
+      break;
+    case "/privacy":
+      content = <PrivacyPolicy />;
+      break;
+    case "/terms":
+      content = <TermsOfUse />;
+      break;
+    case "/disclaimer":
+      content = <Disclaimer />;
       break;
 
     case "/":
