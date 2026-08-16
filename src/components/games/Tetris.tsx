@@ -14,7 +14,7 @@ const BOARD_HEIGHT = 20;
 const INITIAL_DROP_TIME = 800; // ms per tick
 // CHQ: Claude AI (Sonnet): cell size shrinks on narrow phone screens via the min() below,
 // but never grows past this on desktop
-const CELL_SIZE = "min(24px, 7.5vw)";
+const CELL_SIZE = "min(16px, 7.5vw)";
 
 // Tetromino definitions (Shape matrices & hex colors)
 const TETROMINOES = {
@@ -610,9 +610,10 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              minWidth: "120px",
+              flexDirection: "row",
+              gap: "2px",
+              minWidth: "12px",
+              maxWidth: "20vw",
             }}
           >
             <Score score={score} />
