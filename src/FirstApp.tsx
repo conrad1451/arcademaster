@@ -35,7 +35,7 @@ export interface NavigationButtonsProps {
 
 // --- START: Helper components
 
-const UsernameDiaglog = (props: {
+const UsernameDialog = (props: {
   showUsernameDialog: boolean;
   usernameInput: string;
   handleUsernameChange: (
@@ -284,7 +284,7 @@ function FirstApp() {
 
   return (
     <>
-      <UsernameDiaglog
+      <UsernameDialog
         showUsernameDialog={showUsernameDialog}
         usernameInput={usernameInput}
         handleUsernameChange={handleUsernameChange}
