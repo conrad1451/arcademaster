@@ -35,6 +35,7 @@ export interface NavigationButtonsProps {
 
 // --- START: Helper components
 
+// CHQ: Claude AI (Sonnet) added validation helper for username entry
 const UsernameDialog = (props: {
   showUsernameDialog: boolean;
   usernameInput: string;
@@ -49,6 +50,26 @@ const UsernameDialog = (props: {
     handleUsernameChange,
     handleUsernameSubmit,
   } = props;
+
+  // Validation helper
+  const isValidUsername = () => {
+    const trimmed = usernameInput.trim();
+    return trimmed.length >= 2 && trimmed.length <= 20;
+  };
+
+  const getErrorMessage = () => {
+    const trimmed = usernameInput.trim();
+    if (trimmed.length === 0) return "Username is required";
+    if (trimmed.length < 2) return "Username must be at least 2 characters";
+    if (trimmed.length > 20) return "Username must be 20 characters or less";
+    return "";
+  };
+
+  const handleSubmitClick = () => {
+    if (isValidUsername()) {
+      handleUsernameSubmit();
+    }
+  };
   return (
     <Dialog
       open={showUsernameDialog}
@@ -70,15 +91,21 @@ const UsernameDialog = (props: {
           onChange={handleUsernameChange}
           // CHQ: ChatGPT replaced deprecated onKeyPress with onKeyDown
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && isValidUsername()) {
               handleUsernameSubmit();
             }
           }}
-          placeholder="Enter your username"
+          placeholder="Enter your username (2-20 characters)"
+          error={usernameInput.length > 0 && !isValidUsername()}
+          helperText={getErrorMessage()}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleUsernameSubmit} variant="contained">
+        <Button
+          onClick={handleSubmitClick}
+          variant="contained"
+          disabled={!isValidUsername()}
+        >
           Start
         </Button>
       </DialogActions>
