@@ -35,7 +35,7 @@ export interface NavigationButtonsProps {
 
 // --- START: Helper components
 
-// CHQ: Claude AI (Sonnet) added validation helper for username entry
+// CHQ: Claude AI (Haiku) added validation helper for username entry
 const UsernameDialog = (props: {
   showUsernameDialog: boolean;
   usernameInput: string;
