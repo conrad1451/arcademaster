@@ -175,6 +175,15 @@ const MainApp = (props: {
     currentPath,
   );
 
+  useEffect(() => {
+    const root = document.getElementById("root");
+    if (isGamePage) {
+      root?.classList.add("game-page");
+    } else {
+      root?.classList.remove("game-page");
+    }
+  }, [currentPath, isGamePage]);
+
   return (
     <Box
       sx={{
