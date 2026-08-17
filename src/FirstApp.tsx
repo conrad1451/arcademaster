@@ -170,6 +170,11 @@ const MainApp = (props: {
   navigate: (path: string) => void;
 }) => {
   const { currentPath, content, navigate } = props;
+
+  const isGamePage = ["/tetris", "/pingpong", "/the-2048-game"].includes(
+    currentPath,
+  );
+
   return (
     <Box
       sx={{
@@ -177,7 +182,10 @@ const MainApp = (props: {
         bgcolor: "#f4f7f9",
         flex: 1, // fill #root's remaining space, instead of redeclaring full height
         width: "100%", // was minWidth: "100vw" / width: "100%" attempt — no viewport units
+        height: isGamePage ? "100vh" : "auto", // Full height on games
         display: "flex",
+        flexDirection: "column",
+        overflow: isGamePage ? "hidden" : "auto",
         justifyContent: "center",
       }}
     >
@@ -201,14 +209,21 @@ const MainApp = (props: {
           )}
         </>
         {content}
-        {/* CHQ: Claude AI (Sonnet) fixed navigating to pages */}
-        <div>
-          <div className="footer">
-            <Button onClick={() => navigate("/terms")}>Terms of Use</Button>
-            <Button onClick={() => navigate("/privacy")}>Privacy Policy</Button>
-            <Button onClick={() => navigate("/disclaimer")}>Disclaimer</Button>
-          </div>
-        </div>
+        {/* Only show ads and footer on non-game pages */}
+        {!isGamePage && (
+          <>
+            <div id="apitiny-adz-container" style={{ minHeight: "100px" }} />
+            <div className="footer">
+              <Button onClick={() => navigate("/terms")}>Terms of Use</Button>
+              <Button onClick={() => navigate("/privacy")}>
+                Privacy Policy
+              </Button>
+              <Button onClick={() => navigate("/disclaimer")}>
+                Disclaimer
+              </Button>
+            </div>
+          </>
+        )}
       </Box>
     </Box>
   );
