@@ -566,6 +566,12 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     });
   }
 
+  //  CHQ: Claude AI (Sonnet): tabIndex div was minHeight: "100vh" - Tetris now
+  // renders *inside* FirstApp's own full-viewport wrapper (plus a
+  // "Back to Home" button above it), so forcing another full
+  // viewport height here just pushed everything below the fold on
+  // mobile. Let content size itself naturally instead.
+
   return (
     <div
       tabIndex={0}
@@ -574,11 +580,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        // CHQ: Claude AI (Sonnet): was minHeight: "100vh" - Tetris now
-        // renders *inside* FirstApp's own full-viewport wrapper (plus a
-        // "Back to Home" button above it), so forcing another full
-        // viewport height here just pushed everything below the fold on
-        // mobile. Let content size itself naturally instead.
         minHeight: "auto",
         backgroundColor: "#1a1a1a",
         color: "#ffffff",
