@@ -1,5 +1,6 @@
 // CHQ: Gemini AI scaffolded, Claude AI (Sonnet) added a feature, and I edited heavily
 // Touch swipe support added for mobile play
+// CHQ: Claude AI (Haiku): Added smooth tile animations for movements and merges
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
@@ -9,6 +10,11 @@ type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
 interface GameProps {
   username?: string;
+}
+interface TileInfo {
+  value: number;
+  isNew: boolean;
+  isMerged: boolean;
 }
 
 const BOARD_SIZE = 4;
@@ -60,7 +66,7 @@ const slideAndMergeRow = (
       const mergedVal = nonZero[i] * 2;
       newRow.push(mergedVal);
       gainedScore += mergedVal;
-      i++; // Skip merged tile
+      i++;
     } else {
       newRow.push(nonZero[i]);
     }
@@ -87,7 +93,11 @@ const checkGameOver = (currentBoard: Board): boolean => {
 };
 
 // CHQ: Gemini AI: Color mapping for classic 2048 styling
-const getTileStyle = (value: number): React.CSSProperties => {
+const getTileStyle = (
+  value: number,
+  isNew: boolean,
+  isMerged: boolean,
+): React.CSSProperties => {
   const colors: Record<number, { bg: string; text: string }> = {
     2: { bg: "#eee4da", text: "#776e65" },
     4: { bg: "#ede0c8", text: "#776e65" },
@@ -113,6 +123,12 @@ const getTileStyle = (value: number): React.CSSProperties => {
     justifyContent: "center",
     borderRadius: "4px",
     userSelect: "none",
+    // CHQ: Claude AI (Sonnet): Smooth transitions for all properties
+    transition: "all 0.12s ease-in-out",
+    // Scale up new tiles
+    transform: isNew ? "scale(0.8)" : isMerged ? "scale(1.05)" : "scale(1)",
+    // Fade in newly spawned tiles
+    opacity: value === 0 ? 1 : isNew ? 0.8 : 1,
   };
 };
 
@@ -132,8 +148,19 @@ const GameOverDisplay = (props: { initGame: () => void }) => {
         alignItems: "center",
         justifyContent: "center",
         borderRadius: "6px",
+        animation: "fadeIn 0.3s ease-in-out",
       }}
     >
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
       <h2
         style={{
           fontSize: "36px",
@@ -154,6 +181,13 @@ const GameOverDisplay = (props: { initGame: () => void }) => {
           border: "none",
           borderRadius: "3px",
           cursor: "pointer",
+          transition: "background-color 0.2s ease",
+        }}
+        onMouseEnter={(e) => {
+          (e.target as HTMLButtonElement).style.backgroundColor = "#9f8a76";
+        }}
+        onMouseLeave={(e) => {
+          (e.target as HTMLButtonElement).style.backgroundColor = "#8f7a66";
         }}
       >
         Try Again
@@ -165,7 +199,14 @@ const GameOverDisplay = (props: { initGame: () => void }) => {
 const ScoreBoard = (props: { score: number }) => {
   const { score } = props;
   return (
-    <div style={{ marginBottom: "15px", fontSize: "20px", fontWeight: "bold" }}>
+    <div
+      style={{
+        marginBottom: "15px",
+        fontSize: "20px",
+        fontWeight: "bold",
+        transition: "color 0.3s ease",
+      }}
+    >
       Score: {score}
     </div>
   );
@@ -185,6 +226,13 @@ const NewGameButton = (props: { initGame: () => void }) => {
         border: "none",
         borderRadius: "3px",
         cursor: "pointer",
+        transition: "background-color 0.2s ease",
+      }}
+      onMouseEnter={(e) => {
+        (e.target as HTMLButtonElement).style.backgroundColor = "#9f8a76";
+      }}
+      onMouseLeave={(e) => {
+        (e.target as HTMLButtonElement).style.backgroundColor = "#8f7a66";
       }}
     >
       New Game
@@ -214,11 +262,13 @@ const GameBoard = React.forwardRef<
     gameOver: boolean;
     initGame: () => void;
     board: Board;
+    tileMetadata: TileInfo[][];
     onTouchStart: (e: React.TouchEvent) => void;
     onTouchEnd: (e: React.TouchEvent) => void;
   }
 >((props, ref) => {
-  const { gameOver, initGame, board, onTouchStart, onTouchEnd } = props;
+  const { gameOver, initGame, board, tileMetadata, onTouchStart, onTouchEnd } =
+    props;
   return (
     <div
       ref={ref}
@@ -229,7 +279,6 @@ const GameBoard = React.forwardRef<
         width: "340px",
         maxWidth: "88vw",
         height: "340px",
-        // CHQ: Claude AI (Sonnet): keep the board square on narrow phone widths
         aspectRatio: "1 / 1",
         margin: "0 auto",
         padding: "10px",
@@ -239,17 +288,21 @@ const GameBoard = React.forwardRef<
         gridTemplateColumns: "repeat(4, 1fr)",
         gridTemplateRows: "repeat(4, 1fr)",
         gap: "10px",
-        // CHQ: Claude AI (Sonnet): stops the browser from scrolling/refreshing the page
-        // while the user is swiping on the board
         touchAction: "none",
       }}
     >
       {board.map((row, rIdx) =>
-        row.map((val, cIdx) => (
-          <div key={`${rIdx}-${cIdx}`} style={getTileStyle(val)}>
-            {val !== 0 ? val : ""}
-          </div>
-        )),
+        row.map((val, cIdx) => {
+          const metadata = tileMetadata[rIdx][cIdx];
+          return (
+            <div
+              key={`${rIdx}-${cIdx}`}
+              style={getTileStyle(val, metadata.isNew, metadata.isMerged)}
+            >
+              {val !== 0 ? val : ""}
+            </div>
+          );
+        }),
       )}
 
       {gameOver && <GameOverDisplay initGame={initGame} />}
@@ -266,40 +319,59 @@ const createInitialBoard = (): Board => {
   return board;
 };
 
+// CHQ: Claude AI (Haiku): Create metadata grid tracking new/merged tiles
+const createTileMetadata = (board: Board): TileInfo[][] => {
+  return board.map((row) =>
+    row.map((val) => ({
+      value: val,
+      isNew: true,
+      isMerged: false,
+    })),
+  );
+};
+
 // CHQ: Claude AI (Sonnet): minimum finger travel (px) before a touch counts as a swipe,
 // rather than an accidental tap/jiggle
 const SWIPE_THRESHOLD = 30;
-
-// async function submitScore(
-//   username: string,
-//   gameType: "GAME_2048" | "PING_PONG" | "TETRIS",
-//   score: number,
-// ) {
-//   const baseUrl = import.meta.env.VITE_API_URL;
-
-//   await fetch(baseUrl + "/api/scores", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ username, gameType, score }),
-//   });
-// }
 
 export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
   // CHQ: Gemini AI: replaced createEmptyBoard with a helper
   //      function createInitialBoard which gets called here
   const [board, setBoard] = useState<Board>(createInitialBoard);
+  const [tileMetadata, setTileMetadata] = useState<TileInfo[][]>(
+    createTileMetadata(board),
+  );
   const [score, setScore] = useState<number>(0);
   const [gameOver, setGameOver] = useState<boolean>(false);
 
   // CHQ: Claude AI (Sonnet): track where a touch started so we can measure the swipe on release
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // CHQ: Gemini AI: Reset handler for "New Game" and "Try Again" buttons
+  // CHQ: Claude AI (Haiku): Reset animation metadata when game resets
   const initGame = useCallback(() => {
-    setBoard(createInitialBoard());
+    const newBoard = createInitialBoard();
+    setBoard(newBoard);
+    setTileMetadata(createTileMetadata(newBoard));
     setScore(0);
     setGameOver(false);
   }, []);
+
+  // CHQ: Claude AI (Haiku): Clear animation flags after a delay (so animations finish)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTileMetadata((prev) =>
+        prev.map((row) =>
+          row.map((tile) => ({
+            ...tile,
+            isNew: false,
+            isMerged: false,
+          })),
+        ),
+      );
+    }, 150); // Match the transition duration in getTileStyle
+
+    return () => clearTimeout(timer);
+  }, [tileMetadata]);
 
   const move = useCallback(
     (direction: Direction) => {
@@ -307,6 +379,7 @@ export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
 
       let tempBoard = board.map((row) => [...row]);
       let totalGainedScore = 0;
+      const mergedPositions = new Set<string>();
 
       // CHQ: Gemini AI: Rotate board so we always move "LEFT"
       const rotations = { LEFT: 0, DOWN: 3, RIGHT: 2, UP: 1 }[direction];
@@ -320,6 +393,15 @@ export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
         const { newRow, gainedScore } = slideAndMergeRow(tempBoard[r]);
         nextBoard.push(newRow);
         totalGainedScore += gainedScore;
+
+        // Track which positions were merged
+        if (gainedScore > 0) {
+          for (let c = 0; c < newRow.length; c++) {
+            if (newRow[c] > 0) {
+              mergedPositions.add(`${r}-${c}`);
+            }
+          }
+        }
       }
       tempBoard = nextBoard;
 
@@ -335,6 +417,16 @@ export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
       if (hasChanged) {
         const updatedBoard = addRandomTile(tempBoard);
         setBoard(updatedBoard);
+
+        // Create metadata marking new and merged tiles
+        const newMetadata = updatedBoard.map((row, rIdx) =>
+          row.map((val, cIdx) => ({
+            value: val,
+            isNew: updatedBoard[rIdx][cIdx] !== 0 && board[rIdx][cIdx] === 0,
+            isMerged: mergedPositions.has(`${rIdx}-${cIdx}`),
+          })),
+        );
+        setTileMetadata(newMetadata);
 
         const finalScore = score + totalGainedScore;
         setScore(finalScore);
@@ -421,6 +513,7 @@ export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
         gameOver={gameOver}
         initGame={initGame}
         board={board}
+        tileMetadata={tileMetadata}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       />
