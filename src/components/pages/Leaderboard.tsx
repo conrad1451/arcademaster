@@ -1,3 +1,5 @@
+// src/components/pages/Leaderboard.tsx
+
 // CHQ: Claude AI (Haiku) scaffolded
 // CHQ: Claude AI (Sonnet): switched to per-game-type fetch to match actual backend API,
 // refetches on tab change, updatedAt instead of createdAt

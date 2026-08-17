@@ -1,4 +1,5 @@
 // src/App.tsx
+
 import { Provider } from "react-redux";
 import { store } from "./store";
 import FirstApp from "./FirstApp";
