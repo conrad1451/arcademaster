@@ -1,3 +1,5 @@
+// src/components/games/PingPongGame.tsx
+
 // CHQ: Gemini AI generated
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
