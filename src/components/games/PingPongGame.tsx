@@ -1,3 +1,5 @@
+// src/components/games/PingPongGame.tsx
+
 // CHQ: Gemini AI scaffolded, and I edited heavily
 // CHQ: Claude AI (Sonnet): Touch controls + responsive canvas sizing added for mobile
 

@@ -1,3 +1,5 @@
+// src/components/games/2048Game.tsx
+
 // CHQ: Gemini AI scaffolded, Claude AI (Sonnet) added a feature, and I edited heavily
 // Touch swipe support added for mobile play
 // CHQ: Claude AI (Haiku): Added smooth tile animations for movements and merges

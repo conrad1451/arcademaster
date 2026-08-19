@@ -1,3 +1,5 @@
+// src/components/games/Tetris.tsx
+
 // CHQ: Gemini AI scaffolded, and I edited heavily
 
 import React, { useState, useEffect, useCallback } from "react";
