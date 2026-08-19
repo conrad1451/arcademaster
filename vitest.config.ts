@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     globals: true, // Makes testing utilities like `screen`, `render`, `describe`, `it`, `expect` globally available without explicit imports in each test file.
     environment: "jsdom", // Simulates a browser-like DOM environment for your React components. Essential for testing React.
-    setupFiles: "./setupTests.ts", // Specifies the path to your setup file. Vitest will run this file before each test suite.
+    setupFiles: ["./setupTests.ts"], // Specifies the path to your setup file. Vitest will run this file before each test suite.
 
     // 1. Tell Vitest to run files inside vitestTests/
     include: ["tests/vitestTests/**/*.{test,spec}.{ts,tsx}"],
