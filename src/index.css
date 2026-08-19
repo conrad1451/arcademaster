@@ -71,12 +71,12 @@ body {
    scroll on desktop. */
 #root {
   width: 100%;
-  max-width: 1126px;
+  /* max-width: 1126px; */
   height: 100%;
   min-height: 100svh;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   text-align: center;
-  border-inline: 1px solid var(--border);
+  /* border-inline: 1px solid var(--border); */
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
