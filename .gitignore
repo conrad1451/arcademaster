@@ -12,7 +12,9 @@ dist
 dist-ssr
 *.local
 
-git-diff-edits
+git-diff-edits/
+git-logs/
+
 .env
 
 # Editor directories and files
@@ -25,3 +27,10 @@ git-diff-edits
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
