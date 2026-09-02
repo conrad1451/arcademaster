@@ -3,9 +3,9 @@
 // CHQ: scaffoled with Gemini AI, and edited manually and with Claude AI (Sonnet)
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-
 import type { MouseEventHandler } from "react";
-import { submitScore } from "../../utils/submitScore"; // CHQ: I import and use this
+import { submitScore } from "../../utils/submitScore";
+
 interface GameProps {
   username?: string;
 }
@@ -13,12 +13,9 @@ interface GameProps {
 // --- Constants & Config ---
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
-const INITIAL_DROP_TIME = 800; // ms per tick
-// CHQ: Claude AI (Sonnet): cell size shrinks on narrow phone screens via the min() below,
-// but never grows past this on desktop
+const INITIAL_DROP_TIME = 800;
 const CELL_SIZE = "min(16px, 7.5vw)";
 
-// Tetromino definitions (Shape matrices & hex colors)
 const TETROMINOES = {
   I: {
     shape: [
@@ -79,9 +76,7 @@ const TETROMINOES = {
 };
 
 type TetrominoType = keyof typeof TETROMINOES;
-
-// Grid cell structure: [color, occupiedState]
-type Cell = [string, string]; // e.g. ['#000000', 'clear'] or ['#00f0f0', 'merged']
+type Cell = [string, string];
 type Grid = Cell[][];
 
 interface Player {
@@ -90,7 +85,6 @@ interface Player {
   color: string;
 }
 
-// --- Helper Functions ---
 const createEmptyGrid = (): Grid =>
   Array.from({ length: BOARD_HEIGHT }, () =>
     Array.from({ length: BOARD_WIDTH }, () => ["#000000", "clear"] as Cell),
@@ -115,19 +109,14 @@ const checkCollision = (
         const newY = y + pos.y + moveOffset.y;
         const newX = x + pos.x + moveOffset.x;
 
-        // Check if inside vertical boundaries
         if (newY >= BOARD_HEIGHT || newY < 0) return true;
-        // Check if inside horizontal boundaries
         if (newX >= BOARD_WIDTH || newX < 0) return true;
-        // Check if destination cell is already merged
         if (grid[newY]?.[newX]?.[1] === "merged") return true;
       }
     }
   }
   return false;
 };
-
-// --- Helper Components ---
 
 const GameBoard = (props: { displayGrid: Cell[][] }) => {
   const { displayGrid } = props;
@@ -149,10 +138,6 @@ const GameBoard = (props: { displayGrid: Cell[][] }) => {
           <div
             key={`${rIdx}-${cIdx}`}
             style={{
-              // CHQ: Claude AI (Sonnet): fill whatever size the grid
-              // track ends up being (driven by CELL_SIZE) instead of
-              // a fixed pixel size, so the board shrinks to fit
-              // narrow phone screens
               width: "100%",
               height: "100%",
               backgroundColor: color !== "#000000" ? color : "#111111",
@@ -169,122 +154,62 @@ const GameBoard = (props: { displayGrid: Cell[][] }) => {
   );
 };
 
-const Score = (props: { score: number }) => {
-  const { score } = props;
+const Score = (props: { score: number }) => (
+  <div style={{ background: "#2a2a2a", padding: "10px", borderRadius: "4px" }}>
+    <div>SCORE</div>
+    <div style={{ fontSize: "20px", fontWeight: "bold" }}>{props.score}</div>
+  </div>
+);
 
-  return (
-    <div
-      style={{
-        background: "#2a2a2a",
-        padding: "10px",
-        borderRadius: "4px",
-      }}
-    >
-      <div>SCORE</div>
-      <div style={{ fontSize: "20px", fontWeight: "bold" }}>{score}</div>
-    </div>
-  );
-};
+const Lines = (props: { lines: number }) => (
+  <div style={{ background: "#2a2a2a", padding: "10px", borderRadius: "4px" }}>
+    <div>LINES</div>
+    <div style={{ fontSize: "20px", fontWeight: "bold" }}>{props.lines}</div>
+  </div>
+);
 
-const Lines = (props: { lines: number }) => {
-  const { lines } = props;
+const LevelIndicator = (props: { level: number }) => (
+  <div style={{ background: "#2a2a2a", padding: "10px", borderRadius: "4px" }}>
+    <div>LEVEL</div>
+    <div style={{ fontSize: "20px", fontWeight: "bold" }}>{props.level}</div>
+  </div>
+);
 
-  return (
-    <div
-      style={{
-        background: "#2a2a2a",
-        padding: "10px",
-        borderRadius: "4px",
-      }}
-    >
-      <div>LINES</div>
-      <div style={{ fontSize: "20px", fontWeight: "bold" }}>{lines}</div>
-    </div>
-  );
-};
-
-const LevelIndicator = (props: { level: number }) => {
-  const { level } = props;
-  return (
-    <div
-      style={{
-        background: "#2a2a2a",
-        padding: "10px",
-        borderRadius: "4px",
-      }}
-    >
-      <div>LEVEL</div>
-      <div style={{ fontSize: "20px", fontWeight: "bold" }}>{level}</div>
-    </div>
-  );
-};
-
-const GameOverScreen = () => {
-  return (
-    <div
-      style={{
-        color: "#ff4d4d",
-        fontWeight: "bold",
-        textAlign: "center",
-      }}
-    >
-      GAME OVER
-    </div>
-  );
-};
+const GameOverScreen = () => (
+  <div style={{ color: "#ff4d4d", fontWeight: "bold", textAlign: "center" }}>
+    GAME OVER
+  </div>
+);
 
 const StartGameButton = (props: {
   startGame: MouseEventHandler<HTMLButtonElement>;
   gameOver: boolean;
-}) => {
-  const { startGame, gameOver } = props;
-  return (
-    <button
-      onClick={startGame}
-      style={{
-        padding: "10px",
-        fontSize: "14px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        backgroundColor: "#00f0f0",
-        border: "none",
-        borderRadius: "4px",
-        color: "#000",
-      }}
-    >
-      {gameOver ? "RETRY" : "START / RESET"}
-    </button>
-  );
-};
+}) => (
+  <button
+    onClick={props.startGame}
+    style={{
+      padding: "10px",
+      fontSize: "14px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      backgroundColor: "#00f0f0",
+      border: "none",
+      borderRadius: "4px",
+      color: "#000",
+    }}
+  >
+    {props.gameOver ? "RETRY" : "START / RESET"}
+  </button>
+);
 
-// CHQ: Claude AI (Sonnet): trimmed to a single line - the old second
-// paragraph about clicking to focus was dead advice on touch devices
-// and was one of several things pushing content below the fold on
-// short mobile screens
-const ControlsHints = () => {
-  return (
-    <div
-      style={{
-        marginTop: "12px",
-        fontSize: "12px",
-        color: "#888",
-        textAlign: "center",
-      }}
-    >
-      <p style={{ margin: 0 }}>
-        Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop
-      </p>
-    </div>
-  );
-};
+const ControlsHints = () => (
+  <div style={{ marginTop: "12px", fontSize: "12px", color: "#888", textAlign: "center" }}>
+    <p style={{ margin: 0 }}>
+      Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop
+    </p>
+  </div>
+);
 
-// CHQ: Claude AI (Sonnet): On-screen D-pad for phones/tablets,
-// since there's no keyboard. Buttons use onClick (which
-// touchscreens fire fine) plus touchAction: "manipulation"
-// so there's no ~300ms tap delay.
-// CHQ: Claude AI (Sonnet): shrank button size/gaps (56px->44px,
-// 10px->6px gaps) - this was one of the biggest contributors to
-// the whole layout not fitting on a phone screen without scrolling
 const TouchControls = (props: {
   onLeft: () => void;
   onRight: () => void;
@@ -292,8 +217,6 @@ const TouchControls = (props: {
   onSoftDrop: () => void;
   onHardDrop: () => void;
 }) => {
-  const { onLeft, onRight, onRotate, onSoftDrop, onHardDrop } = props;
-
   const buttonStyle: React.CSSProperties = {
     fontSize: "18px",
     fontWeight: "bold",
@@ -311,40 +234,19 @@ const TouchControls = (props: {
   };
 
   return (
-    <div
-      style={{
-        marginTop: "12px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "6px",
-      }}
-    >
+    <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
       <div style={{ display: "flex", gap: "6px" }}>
-        <button style={buttonStyle} onClick={onRotate} aria-label="Rotate">
-          ⟳
-        </button>
+        <button style={buttonStyle} onClick={props.onRotate} aria-label="Rotate">⟳</button>
       </div>
       <div style={{ display: "flex", gap: "6px" }}>
-        <button style={buttonStyle} onClick={onLeft} aria-label="Move left">
-          ⬅️
-        </button>
-        <button style={buttonStyle} onClick={onSoftDrop} aria-label="Soft drop">
-          ⬇️
-        </button>
-        <button style={buttonStyle} onClick={onRight} aria-label="Move right">
-          ➡️
-        </button>
+        <button style={buttonStyle} onClick={props.onLeft} aria-label="Move left">⬅️</button>
+        <button style={buttonStyle} onClick={props.onSoftDrop} aria-label="Soft drop">⬇️</button>
+        <button style={buttonStyle} onClick={props.onRight} aria-label="Move right">➡️</button>
       </div>
       <div style={{ display: "flex", gap: "6px" }}>
         <button
-          style={{
-            ...buttonStyle,
-            minWidth: "160px",
-            backgroundColor: "#00f0f0",
-            color: "#000",
-          }}
-          onClick={onHardDrop}
+          style={{ ...buttonStyle, minWidth: "160px", backgroundColor: "#00f0f0", color: "#000" }}
+          onClick={props.onHardDrop}
           aria-label="Hard drop"
         >
           HARD DROP
@@ -354,7 +256,6 @@ const TouchControls = (props: {
   );
 };
 
-// --- Main Component ---
 export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   const [grid, setGrid] = useState<Grid>(createEmptyGrid());
   const [score, setScore] = useState<number>(0);
@@ -369,42 +270,36 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     color: "#000000",
   });
 
-  // CHQ: Claude AI (Sonnet, bug fix): refs mirroring the latest state.
-  // The drop/move/rotate functions and the game-loop interval read from
-  // these instead of closing over `player`/`grid`/`level`/`lines`
-  // directly. This fixes two bugs:
-  //   1. The auto-drop interval used to be recreated every time `player`
-  //      or `grid` changed (i.e. on every move), which reset the fall
-  //      timer - mashing left/right kept a piece from ever dropping.
-  //   2. Functions called from the interval could otherwise act on
-  //      stale player/grid/level/lines values captured when the effect
-  //      was last set up.
   const playerRef = useRef(player);
   const gridRef = useRef(grid);
   const levelRef = useRef(level);
   const linesRef = useRef(lines);
-  useEffect(() => {
-    playerRef.current = player;
-  }, [player]);
-  useEffect(() => {
-    gridRef.current = grid;
-  }, [grid]);
-  useEffect(() => {
-    levelRef.current = level;
-  }, [level]);
-  useEffect(() => {
-    linesRef.current = lines;
-  }, [lines]);
+  const scoreRef = useRef(score);
 
-  // Spawn new tetromino
+  useEffect(() => { playerRef.current = player; }, [player]);
+  useEffect(() => { gridRef.current = grid; }, [grid]);
+  useEffect(() => { levelRef.current = level; }, [level]);
+  useEffect(() => { linesRef.current = lines; }, [lines]);
+  useEffect(() => { scoreRef.current = score; }, [score]);
+
   const resetPlayer = useCallback(() => {
     const nextTetromino = getRandomTetromino();
-    setPlayer({
+    const newPlayer = {
       pos: { x: Math.floor(BOARD_WIDTH / 2) - 1, y: 0 },
       tetromino: nextTetromino.shape,
       color: nextTetromino.color,
-    });
-  }, []);
+    };
+
+    // Check if spawn location collides immediately (Game Over)
+    if (checkCollision(newPlayer, gridRef.current, { x: 0, y: 0 })) {
+      setGameOver(true);
+      submitScore(username, "TETRIS", scoreRef.current);
+      setDropTime(null);
+      return;
+    }
+
+    setPlayer(newPlayer);
+  }, [username]);
 
   const startGame = () => {
     setGrid(createEmptyGrid());
@@ -416,7 +311,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     resetPlayer();
   };
 
-  // Rotate Matrix
   const rotateMatrix = (matrix: number[][]): number[][] => {
     return matrix[0].map((_, index) =>
       matrix.map((row) => row[index]).reverse(),
@@ -427,14 +321,12 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     const clonedPlayer = JSON.parse(JSON.stringify(playerRef.current));
     clonedPlayer.tetromino = rotateMatrix(clonedPlayer.tetromino);
 
-    // Basic wall kick handling
     const pos = clonedPlayer.pos.x;
     let offset = 1;
     while (checkCollision(clonedPlayer, gridRef.current, { x: 0, y: 0 })) {
       clonedPlayer.pos.x += offset;
       offset = -(offset + (offset > 0 ? 1 : -1));
       if (offset > clonedPlayer.tetromino[0].length) {
-        // Rotation not possible, revert
         clonedPlayer.pos.x = pos;
         return;
       }
@@ -451,26 +343,11 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     }
   }, []);
 
-  // CHQ: Claude AI (Sonnet): Locking a piece (merge into grid,
-  // clear lines, update score, spawn next piece) used to live
-  // in a useEffect keyed off a `player.collided` flag. That
-  // caused setState calls to run synchronously inside an effect
-  // body, which React warns about (cascading renders). It's
-  // moved here into a plain function that's called directly
-  // from the drop/hardDrop event handlers instead - no effect,
-  // no flag needed.
   const lockPiece = useCallback(
     (finalPlayer: Player) => {
-      // Game Over condition (collided at top)
-      if (finalPlayer.pos.y < 1) {
-        setGameOver(true);
-        submitScore(username, "TETRIS", score);
-        setDropTime(null);
-        return;
-      }
+      const currentGrid = gridRef.current;
+      const newGrid = currentGrid.map((row) => [...row]);
 
-      // 1. Merge piece into grid
-      const newGrid = grid.map((row) => [...row]);
       finalPlayer.tetromino.forEach((row, y) => {
         row.forEach((value, x) => {
           if (value !== 0) {
@@ -488,16 +365,12 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         });
       });
 
-      // 2. Clear completed rows
       let rowsCleared = 0;
       const sweptGrid = newGrid.reduce((acc, row) => {
         if (row.every((cell) => cell[1] === "merged")) {
           rowsCleared += 1;
           acc.unshift(
-            Array.from(
-              { length: BOARD_WIDTH },
-              () => ["#000000", "clear"] as Cell,
-            ),
+            Array.from({ length: BOARD_WIDTH }, () => ["#000000", "clear"] as Cell),
           );
         } else {
           acc.push(row);
@@ -506,20 +379,19 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
       }, [] as Grid);
 
       if (rowsCleared > 0) {
-        // Standard Tetris scoring multiplier
         const linePoints = [0, 40, 100, 300, 1200];
-        setScore((prev) => prev + linePoints[rowsCleared] * level);
+        const addedScore = linePoints[rowsCleared] * levelRef.current;
+        setScore((prev) => prev + addedScore);
         setLines((prev) => prev + rowsCleared);
       }
 
       setGrid(sweptGrid);
       resetPlayer();
     },
-    [grid, level, resetPlayer, score, username],
+    [resetPlayer],
   );
 
   const drop = useCallback(() => {
-    // CHQ: Claude AI (Sonnet): Increase speed as levels progress
     if (linesRef.current >= levelRef.current * 10) {
       setLevel((prev) => prev + 1);
       setDropTime((prev) =>
@@ -552,13 +424,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     lockPiece({ ...currentPlayer, pos: { x: currentPlayer.pos.x, y: currentY } });
   }, [lockPiece]);
 
-  // Game Loop Ticker
-  // CHQ: Claude AI (Sonnet, bug fix): only depends on dropTime/gameOver now.
-  // Previously this also depended on `player` and `grid`, so the interval
-  // was destroyed and recreated on every single move - which reset the
-  // fall timer and let mashing left/right stall the piece from ever
-  // auto-dropping. `drop` reads current player/grid via refs instead, so
-  // the interval can stay stable across moves.
   useEffect(() => {
     if (!dropTime || gameOver) return;
     const interval = setInterval(() => {
@@ -567,13 +432,9 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     return () => clearInterval(interval);
   }, [dropTime, gameOver, drop]);
 
-  // Controls handler
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (gameOver) return;
 
-    // CHQ: Claude AI (Sonnet, bug fix): preventDefault for all handled
-    // keys, not just space - previously ArrowUp/Down/Left/Right scrolled
-    // the page while playing.
     if (e.key === "ArrowLeft") {
       e.preventDefault();
       movePlayer(-1);
@@ -592,7 +453,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     }
   };
 
-  // Prepare display grid (overlay active piece on top of saved grid)
   const displayGrid = grid.map((row) => [...row]);
   if (!gameOver) {
     player.tetromino.forEach((row, y) => {
@@ -612,12 +472,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
       });
     });
   }
-
-  //  CHQ: Claude AI (Sonnet): tabIndex div was minHeight: "100vh" - Tetris now
-  // renders *inside* FirstApp's own full-viewport wrapper (plus a
-  // "Back to Home" button above it), so forcing another full
-  // viewport height here just pushed everything below the fold on
-  // mobile. Let content size itself naturally instead.
 
   return (
     <div
@@ -643,16 +497,11 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           display: "flex",
           gap: "20px",
           alignItems: "flex-start",
-          // CHQ: let the sidebar wrap below the board on narrow phones
-          // instead of squeezing everything into one row
           flexWrap: "wrap",
           justifyContent: "center",
         }}
       >
-        {/* Game Board */}
         <GameBoard displayGrid={displayGrid} />
-
-        {/* Sidebar Info */}
 
         <div>
           <div
@@ -665,19 +514,12 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
             }}
           >
             <Score score={score} />
-
             <Lines lines={lines} />
-
             <LevelIndicator level={level} />
-
             <StartGameButton startGame={startGame} gameOver={gameOver} />
-
             {gameOver && <GameOverScreen />}
           </div>
 
-          {/* CHQ: Claude AI (Sonnet): Touch controls - only
-          useful on touch devices, but harmless
-          (just extra buttons) if shown on desktop too */}
           <TouchControls
             onLeft={() => !gameOver && movePlayer(-1)}
             onRight={() => !gameOver && movePlayer(1)}
@@ -686,7 +528,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
             onHardDrop={() => !gameOver && hardDrop()}
           />
 
-          {/* Controls Hint */}
           <ControlsHints />
         </div>
       </div>
