@@ -1,8 +1,8 @@
 // src/components/games/Tetris.tsx
 
-// CHQ: Gemini AI scaffolded, and I edited heavily
+// CHQ: scaffoled with Gemini AI, and edited manually and with Claude AI (Sonnet)
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import type { MouseEventHandler } from "react";
 import { submitScore } from "../../utils/submitScore"; // CHQ: I import and use this
@@ -369,6 +369,33 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     color: "#000000",
   });
 
+  // CHQ: Claude AI (Sonnet, bug fix): refs mirroring the latest state.
+  // The drop/move/rotate functions and the game-loop interval read from
+  // these instead of closing over `player`/`grid`/`level`/`lines`
+  // directly. This fixes two bugs:
+  //   1. The auto-drop interval used to be recreated every time `player`
+  //      or `grid` changed (i.e. on every move), which reset the fall
+  //      timer - mashing left/right kept a piece from ever dropping.
+  //   2. Functions called from the interval could otherwise act on
+  //      stale player/grid/level/lines values captured when the effect
+  //      was last set up.
+  const playerRef = useRef(player);
+  const gridRef = useRef(grid);
+  const levelRef = useRef(level);
+  const linesRef = useRef(lines);
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
+  useEffect(() => {
+    levelRef.current = level;
+  }, [level]);
+  useEffect(() => {
+    linesRef.current = lines;
+  }, [lines]);
+
   // Spawn new tetromino
   const resetPlayer = useCallback(() => {
     const nextTetromino = getRandomTetromino();
@@ -396,14 +423,14 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     );
   };
 
-  const playerRotate = () => {
-    const clonedPlayer = JSON.parse(JSON.stringify(player));
+  const playerRotate = useCallback(() => {
+    const clonedPlayer = JSON.parse(JSON.stringify(playerRef.current));
     clonedPlayer.tetromino = rotateMatrix(clonedPlayer.tetromino);
 
     // Basic wall kick handling
     const pos = clonedPlayer.pos.x;
     let offset = 1;
-    while (checkCollision(clonedPlayer, grid, { x: 0, y: 0 })) {
+    while (checkCollision(clonedPlayer, gridRef.current, { x: 0, y: 0 })) {
       clonedPlayer.pos.x += offset;
       offset = -(offset + (offset > 0 ? 1 : -1));
       if (offset > clonedPlayer.tetromino[0].length) {
@@ -413,16 +440,16 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
       }
     }
     setPlayer(clonedPlayer);
-  };
+  }, []);
 
-  const movePlayer = (dir: number) => {
-    if (!checkCollision(player, grid, { x: dir, y: 0 })) {
+  const movePlayer = useCallback((dir: number) => {
+    if (!checkCollision(playerRef.current, gridRef.current, { x: dir, y: 0 })) {
       setPlayer((prev) => ({
         ...prev,
         pos: { x: prev.pos.x + dir, y: prev.pos.y },
       }));
     }
-  };
+  }, []);
 
   // CHQ: Claude AI (Sonnet): Locking a piece (merge into grid,
   // clear lines, update score, spawn next piece) used to live
@@ -491,55 +518,73 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     [grid, level, resetPlayer, score, username],
   );
 
-  const drop = () => {
+  const drop = useCallback(() => {
     // CHQ: Claude AI (Sonnet): Increase speed as levels progress
-    if (lines >= level * 10) {
+    if (linesRef.current >= levelRef.current * 10) {
       setLevel((prev) => prev + 1);
       setDropTime((prev) =>
         prev ? Math.max(100, prev - 100) : INITIAL_DROP_TIME,
       );
     }
 
-    if (!checkCollision(player, grid, { x: 0, y: 1 })) {
+    const currentPlayer = playerRef.current;
+    if (!checkCollision(currentPlayer, gridRef.current, { x: 0, y: 1 })) {
       setPlayer((prev) => ({
         ...prev,
         pos: { x: prev.pos.x, y: prev.pos.y + 1 },
       }));
     } else {
-      lockPiece(player);
+      lockPiece(currentPlayer);
     }
-  };
+  }, [lockPiece]);
 
-  const hardDrop = () => {
-    let currentY = player.pos.y;
+  const hardDrop = useCallback(() => {
+    const currentPlayer = playerRef.current;
+    let currentY = currentPlayer.pos.y;
     while (
-      !checkCollision(player, grid, { x: 0, y: currentY - player.pos.y + 1 })
+      !checkCollision(currentPlayer, gridRef.current, {
+        x: 0,
+        y: currentY - currentPlayer.pos.y + 1,
+      })
     ) {
       currentY++;
     }
-    lockPiece({ ...player, pos: { x: player.pos.x, y: currentY } });
-  };
+    lockPiece({ ...currentPlayer, pos: { x: currentPlayer.pos.x, y: currentY } });
+  }, [lockPiece]);
 
   // Game Loop Ticker
+  // CHQ: Claude AI (Sonnet, bug fix): only depends on dropTime/gameOver now.
+  // Previously this also depended on `player` and `grid`, so the interval
+  // was destroyed and recreated on every single move - which reset the
+  // fall timer and let mashing left/right stall the piece from ever
+  // auto-dropping. `drop` reads current player/grid via refs instead, so
+  // the interval can stay stable across moves.
   useEffect(() => {
     if (!dropTime || gameOver) return;
     const interval = setInterval(() => {
       drop();
     }, dropTime);
     return () => clearInterval(interval);
-  }, [dropTime, gameOver, player, grid]);
+  }, [dropTime, gameOver, drop]);
 
   // Controls handler
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (gameOver) return;
 
+    // CHQ: Claude AI (Sonnet, bug fix): preventDefault for all handled
+    // keys, not just space - previously ArrowUp/Down/Left/Right scrolled
+    // the page while playing.
     if (e.key === "ArrowLeft") {
+      e.preventDefault();
       movePlayer(-1);
     } else if (e.key === "ArrowRight") {
+      e.preventDefault();
       movePlayer(1);
     } else if (e.key === "ArrowDown") {
+      e.preventDefault();
       drop();
     } else if (e.key === "ArrowUp") {
+      e.preventDefault();
       playerRotate();
     } else if (e.key === " ") {
       e.preventDefault();
