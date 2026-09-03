@@ -308,7 +308,7 @@ const ControlsHints = () => (
     }}
   >
     <p style={{ margin: 0 }}>
-      Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | C / Shift Hold
+      Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | C / Shift Hold | P / Esc Pause
     </p>
   </div>
 );
@@ -433,6 +433,15 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   const holdTypeRef = useRef(holdType);
   const canHoldRef = useRef(canHold);
 
+  // CHQ: Gemini AI added pause state and toggle
+  const [isPaused, setIsPaused] = useState(false);
+
+  const togglePause = () => {
+    if (!gameOver) {
+      setIsPaused((prev) => !prev);
+    }
+  };
+
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { gridRef.current = grid; }, [grid]);
   useEffect(() => { levelRef.current = level; }, [level]);
@@ -473,7 +482,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   );
 
   const holdPiece = useCallback(() => {
-    if (!canHoldRef.current || gameOver) return;
+    if (!canHoldRef.current || gameOver || isPaused) return;
 
     const currentType = playerRef.current.type;
     const currentHeld = holdTypeRef.current;
@@ -486,7 +495,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     } else {
       resetPlayer();
     }
-  }, [gameOver, resetPlayer]);
+  }, [gameOver, isPaused, resetPlayer]);
 
   const startGame = () => {
     setGrid(createEmptyGrid());
@@ -494,6 +503,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     setLines(0);
     setLevel(1);
     setGameOver(false);
+    setIsPaused(false);
     setHoldType(null);
     setCanHold(true);
 
@@ -516,6 +526,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   };
 
   const playerRotate = useCallback(() => {
+    if (isPaused) return;
     const clonedPlayer: Player = JSON.parse(JSON.stringify(playerRef.current));
     clonedPlayer.tetromino = rotateMatrix(clonedPlayer.tetromino);
 
@@ -530,16 +541,17 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
       }
     }
     setPlayer(clonedPlayer);
-  }, []);
+  }, [isPaused]);
 
   const movePlayer = useCallback((dir: number) => {
+    if (isPaused) return;
     if (!checkCollision(playerRef.current, gridRef.current, { x: dir, y: 0 })) {
       setPlayer((prev) => ({
         ...prev,
         pos: { x: prev.pos.x + dir, y: prev.pos.y },
       }));
     }
-  }, []);
+  }, [isPaused]);
 
   const lockPiece = useCallback(
     (finalPlayer: Player) => {
@@ -601,6 +613,8 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   );
 
   const drop = useCallback(() => {
+    if (isPaused) return;
+
     if (linesRef.current >= levelRef.current * 10) {
       setLevel((prev) => prev + 1);
       setDropTime((prev) =>
@@ -617,9 +631,10 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     } else {
       lockPiece(currentPlayer);
     }
-  }, [lockPiece]);
+  }, [isPaused, lockPiece]);
 
   const hardDrop = useCallback(() => {
+    if (isPaused) return;
     const currentPlayer = playerRef.current;
     let currentY = currentPlayer.pos.y;
     while (
@@ -631,20 +646,30 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
       currentY++;
     }
     lockPiece({ ...currentPlayer, pos: { x: currentPlayer.pos.x, y: currentY } });
-  }, [lockPiece]);
+  }, [isPaused, lockPiece]);
 
-  // Ticker Effect
+  // Ticker Effect - includes isPaused to stop interval when paused
   useEffect(() => {
-    if (!dropTime || gameOver) return;
+    if (!dropTime || gameOver || isPaused) return;
     const interval = setInterval(() => {
       drop();
     }, dropTime);
     return () => clearInterval(interval);
-  }, [dropTime, gameOver, drop]);
+  }, [dropTime, gameOver, isPaused, drop]);
 
   // Keyboard controls
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (gameOver) return;
+
+    // Toggle pause on 'P' or 'Escape'
+    if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
+
+    // Prevent input actions while paused
+    if (isPaused) return;
 
     if (e.key === "ArrowLeft") {
       e.preventDefault();
@@ -667,34 +692,32 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     }
   };
 
-// Overlay current active piece onto display grid
-const displayGrid = grid.map((row) => [...row]);
+  // Overlay current active piece onto display grid
+  const displayGrid = grid.map((row) => [...row]);
 
-if (!gameOver) {
+  if (!gameOver) {
+    // 1. Calculate ghost drop position
+    const ghostY = getGhostDropY(player, grid);
 
-  // CHQ: Gemini AI added calculation for ghost piece overlay
-  // 1. Calculate ghost drop position
-  const ghostY = getGhostDropY(player, grid);
-
-  // 2. Overlay ghost piece (outlined cells)
-  if (ghostY > player.pos.y) {
-    player.tetromino.forEach((row, y) => {
-      row.forEach((val, x) => {
-        if (val !== 0) {
-          const boardY = y + ghostY;
-          const boardX = x + player.pos.x;
-          if (
-            boardY >= 0 &&
-            boardY < BOARD_HEIGHT &&
-            boardX >= 0 &&
-            boardX < BOARD_WIDTH
-          ) {
-            displayGrid[boardY][boardX] = [player.color, "ghost"];
+    // 2. Overlay ghost piece (outlined cells)
+    if (ghostY > player.pos.y) {
+      player.tetromino.forEach((row, y) => {
+        row.forEach((val, x) => {
+          if (val !== 0) {
+            const boardY = y + ghostY;
+            const boardX = x + player.pos.x;
+            if (
+              boardY >= 0 &&
+              boardY < BOARD_HEIGHT &&
+              boardX >= 0 &&
+              boardX < BOARD_WIDTH
+            ) {
+              displayGrid[boardY][boardX] = [player.color, "ghost"];
+            }
           }
-        }
+        });
       });
-    });
-  }
+    }
 
     // 3. Overlay active piece over ghost
     player.tetromino.forEach((row, y) => {
@@ -714,6 +737,7 @@ if (!gameOver) {
       });
     });
   }
+
   return (
     <div
       tabIndex={0}
@@ -741,7 +765,58 @@ if (!gameOver) {
           justifyContent: "center",
         }}
       >
-        <GameBoard displayGrid={displayGrid} />
+        <div style={{ position: "relative", display: "inline-block" }}>
+          <GameBoard displayGrid={displayGrid} />
+
+          {isPaused && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "rgba(0, 0, 0, 0.75)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "4px",
+                zIndex: 10,
+                backdropFilter: "blur(2px)",
+              }}
+            >
+              <h2
+                style={{
+                  color: "#fff",
+                  fontSize: "1.8rem",
+                  margin: "0 0 12px 0",
+                  textTransform: "uppercase",
+                  letterSpacing: "2px",
+                  textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                }}
+              >
+                Paused
+              </h2>
+              <button
+                onClick={togglePause}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  color: "#fff",
+                  backgroundColor: "#3b82f6",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                }}
+              >
+                Resume (P)
+              </button>
+            </div>
+          )}
+        </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "200px" }}>
           {/* Hold & Next Previews */}
