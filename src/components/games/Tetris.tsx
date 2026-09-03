@@ -193,6 +193,15 @@ const MiniPiecePreview = ({
 };
 
 // --- Helper Components ---
+// CHQ: Gemini AI created component
+const getGhostDropY = (player: Player, grid: Grid): number => {
+  let ghostY = player.pos.y;
+  while (!checkCollision(player, grid, { x: 0, y: ghostY - player.pos.y + 1 })) {
+    ghostY++;
+  }
+  return ghostY;
+};
+
 const GameBoard = ({ displayGrid }: { displayGrid: Cell[][] }) => (
   <div
     style={{
@@ -207,21 +216,32 @@ const GameBoard = ({ displayGrid }: { displayGrid: Cell[][] }) => (
     }}
   >
     {displayGrid.map((row, rIdx) =>
-      row.map(([color], cIdx) => (
-        <div
-          key={`${rIdx}-${cIdx}`}
-          style={{
-            width: "100%",
-            height: "100%",
-            backgroundColor: color !== "#000000" ? color : "#111111",
-            borderRadius: "2px",
-            boxShadow:
-              color !== "#000000"
-                ? "inset 2px 2px 4px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.4)"
-                : "none",
-          }}
-        />
-      ))
+      row.map(([color, state], cIdx) => {
+        const isGhost = state === "ghost";
+        const isFilled = color !== "#000000";
+
+        return (
+          <div
+            key={`${rIdx}-${cIdx}`}
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: isGhost
+                ? "transparent"
+                : isFilled
+                ? color
+                : "#111111",
+              border: isGhost ? `2px dashed ${color}` : "none",
+              boxSizing: "border-box",
+              borderRadius: "2px",
+              boxShadow:
+                isFilled && !isGhost
+                  ? "inset 2px 2px 4px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.4)"
+                  : "none",
+            }}
+          />
+        );
+      })
     )}
   </div>
 );
@@ -647,9 +667,36 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     }
   };
 
-  // Overlay current active piece onto display grid
-  const displayGrid = grid.map((row) => [...row]);
-  if (!gameOver) {
+// Overlay current active piece onto display grid
+const displayGrid = grid.map((row) => [...row]);
+
+if (!gameOver) {
+
+  // CHQ: Gemini AI added calculation for ghost piece overlay
+  // 1. Calculate ghost drop position
+  const ghostY = getGhostDropY(player, grid);
+
+  // 2. Overlay ghost piece (outlined cells)
+  if (ghostY > player.pos.y) {
+    player.tetromino.forEach((row, y) => {
+      row.forEach((val, x) => {
+        if (val !== 0) {
+          const boardY = y + ghostY;
+          const boardX = x + player.pos.x;
+          if (
+            boardY >= 0 &&
+            boardY < BOARD_HEIGHT &&
+            boardX >= 0 &&
+            boardX < BOARD_WIDTH
+          ) {
+            displayGrid[boardY][boardX] = [player.color, "ghost"];
+          }
+        }
+      });
+    });
+  }
+
+    // 3. Overlay active piece over ghost
     player.tetromino.forEach((row, y) => {
       row.forEach((val, x) => {
         if (val !== 0) {
@@ -667,7 +714,6 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
       });
     });
   }
-
   return (
     <div
       tabIndex={0}
