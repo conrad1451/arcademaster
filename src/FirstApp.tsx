@@ -221,7 +221,7 @@ const MainApp = (props: {
         {/* Only show ads and footer on non-game pages */}
         {!isGamePage && (
           <>
-            <div id="apitiny-adz-container" style={{ minHeight: "100px" }} />
+            <div id="ta-ad-container" style={{ minHeight: "100px" }} />
             <div className="footer">
               <Button onClick={() => navigate("/terms")}>Terms of Use</Button>
               <Button onClick={() => navigate("/privacy")}>
