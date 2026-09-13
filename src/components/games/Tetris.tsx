@@ -901,8 +901,13 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           : {}),
       }}
     >
-      <h1 ref={titleRef} style={{ margin: 0, fontSize: "24px" }}>
-        TETRIS
+      <h1
+        ref={titleRef}
+        style={{
+          color: "#888",
+          margin: 0, fontSize: "24px"
+        }}>
+          TETRIS
       </h1>
 
       {/* CHQ: Claude AI: Row 1: board + Hold/Next. flexWrap is intentionally "nowrap" here
