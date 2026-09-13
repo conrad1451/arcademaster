@@ -289,6 +289,7 @@ const GameBoard = ({
 const ScoreCard = ({ label, value }: { label: string; value: number }) => (
   <div
     style={{
+      display: "flex",
       background: "#2a2a2a",
       padding: "8px 12px",
       borderRadius: "4px",
@@ -296,7 +297,7 @@ const ScoreCard = ({ label, value }: { label: string; value: number }) => (
       flex: 1,
     }}
   >
-    <div style={{ fontSize: "10px", color: "#aaa" }}>{label}</div>
+    <div style={{ fontSize: "10px", color: "#aaa" }}>{label}: </div>
     <div style={{ fontSize: "18px", fontWeight: "bold" }}>{value}</div>
   </div>
 );
