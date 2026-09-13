@@ -977,6 +977,9 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         >
           <MiniPiecePreview title="HOLD" type={holdType} />
           <MiniPiecePreview title="NEXT" type={nextType} />
+          <ScoreCard label="SCORE" value={score} />        
+          <ScoreCard label="LINES" value={lines} />        
+          <ScoreCard label="LEVEL" value={level} />
         </div>
       </div>
 
@@ -992,11 +995,11 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           maxWidth: "340px",
         }}
       >
-        <div style={{ display: "flex", gap: "6px" }}>
+        {/* <div style={{ display: "flex", gap: "6px" }}>
           <ScoreCard label="SCORE" value={score} />
           <ScoreCard label="LINES" value={lines} />
           <ScoreCard label="LEVEL" value={level} />
-        </div>
+        </div> */}
 
         <StartGameButton startGame={startGame} gameOver={gameOver} />
         {gameOver && <GameOverScreen />}
