@@ -15,6 +15,9 @@ const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const INITIAL_DROP_TIME = 800; // ms per tick
 const CELL_SIZE = "min(16px, 7.5vw)";
+// CHQ: Claude AI (Sonnet): Smaller cells for the Hold/Next previews so they can sit beside the
+// board on narrow phone screens without pushing the layout past 100vw.
+const PREVIEW_CELL_SIZE = "min(12px, 4.2vw)";
 
 // Tetromino definitions
 const TETROMINOES = {
@@ -120,6 +123,37 @@ const checkCollision = (
   return false;
 };
 
+// --- Responsive / device detection ---
+// CHQ: Claude AI - detect coarse-pointer (touch) devices so we can show
+// touch controls on mobile/tablet and keyboard hints on desktop, instead
+// of always rendering both regardless of input method.
+const useIsTouchDevice = (): boolean => {
+  const [isTouch, setIsTouch] = useState<boolean>(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(pointer: coarse)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(pointer: coarse)");
+
+    const handleChange = (e: MediaQueryListEvent) => setIsTouch(e.matches);
+
+    // Covers devices that can switch input mode (e.g. laptops with
+    // touchscreens, tablets with a paired keyboard/mouse).
+    if (mql.addEventListener) {
+      mql.addEventListener("change", handleChange);
+      return () => mql.removeEventListener("change", handleChange);
+    } else {
+      // Safari <14 fallback
+      mql.addListener(handleChange);
+      return () => mql.removeListener(handleChange);
+    }
+  }, []);
+
+  return isTouch;
+};
+
 // CHQ: Gemini AI: Helper component for Next and Hold previews
 const MiniPiecePreview = ({
   title,
@@ -163,8 +197,8 @@ const MiniPiecePreview = ({
       <div
         style={{
           display: "grid",
-          gridTemplateRows: `repeat(4, ${CELL_SIZE})`,
-          gridTemplateColumns: `repeat(4, ${CELL_SIZE})`,
+          gridTemplateRows: `repeat(4, ${PREVIEW_CELL_SIZE})`,
+          gridTemplateColumns: `repeat(4, ${PREVIEW_CELL_SIZE})`,
           gap: "1px",
           backgroundColor: "#111",
           padding: "2px",
@@ -298,7 +332,9 @@ const StartGameButton = ({
   </button>
 );
 
-const ControlsHints = () => (
+// CHQ: Claude AI - hints now vary by input method instead of always
+// listing keyboard shortcuts on devices that have no keyboard.
+const ControlsHints = ({ isTouch }: { isTouch: boolean }) => (
   <div
     style={{
       marginTop: "12px",
@@ -307,9 +343,17 @@ const ControlsHints = () => (
       textAlign: "center",
     }}
   >
-    <p style={{ margin: 0 }}>
-      Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | C / Shift Hold | P / Esc Pause
-    </p>
+    {isTouch ? (
+      <p style={{ margin: 0 }}>
+        Controls: Use the on-screen buttons below to move, rotate, drop, and
+        hold pieces.
+      </p>
+    ) : (
+      <p style={{ margin: 0 }}>
+        Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | C
+        / Shift Hold | P / Esc Pause
+      </p>
+    )}
   </div>
 );
 
@@ -403,6 +447,8 @@ const TouchControls = ({
 
 // --- Main Component ---
 export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
+  const isTouchDevice = useIsTouchDevice();
+
   const [grid, setGrid] = useState<Grid>(createEmptyGrid());
   const [score, setScore] = useState<number>(0);
   const [lines, setLines] = useState<number>(0);
@@ -756,16 +802,20 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     >
       <h1 style={{ margin: "0 0 10px 0", fontSize: "24px" }}>TETRIS</h1>
 
+      {/* CHQ: Claude AI: Intentionally "nowrap" here
+          so the previews stay pinned to the right of the board on every
+          screen size, including narrow phones, instead of dropping below. */}
       <div
         style={{
           display: "flex",
-          gap: "20px",
+          gap: "8px",
           alignItems: "flex-start",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           justifyContent: "center",
+          width: "100%",
         }}
       >
-        <div style={{ position: "relative", display: "inline-block" }}>
+        <div style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
           <GameBoard displayGrid={displayGrid} />
 
           {isPaused && (
@@ -818,22 +868,37 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           )}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "200px" }}>
-          {/* Hold & Next Previews */}
-          <div style={{ display: "flex", gap: "6px" }}>
-            <MiniPiecePreview title="HOLD" type={holdType} />
-            <MiniPiecePreview title="NEXT" type={nextType} />
-          </div>
+        {/* CHQ: Claude AI: Hold & Next Previews - always stay to the right of the board */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}>
+          <MiniPiecePreview title="HOLD" type={holdType} />
+          <MiniPiecePreview title="NEXT" type={nextType} />
+        </div>
+      </div>
 
-          <div style={{ display: "flex", gap: "6px" }}>
-            <ScoreCard label="SCORE" value={score} />
-            <ScoreCard label="LINES" value={lines} />
-            <ScoreCard label="LEVEL" value={level} />
-          </div>
+      {/* Row 2: score, buttons, and controls - free to stack/wrap on
+          narrow screens since they're no longer tied to the board row. */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          width: "100%",
+          maxWidth: "340px",
+          marginTop: "10px",
+        }}
+      >
+        <div style={{ display: "flex", gap: "6px" }}>
+          <ScoreCard label="SCORE" value={score} />
+          <ScoreCard label="LINES" value={lines} />
+          <ScoreCard label="LEVEL" value={level} />
+        </div>
 
-          <StartGameButton startGame={startGame} gameOver={gameOver} />
-          {gameOver && <GameOverScreen />}
+        <StartGameButton startGame={startGame} gameOver={gameOver} />
+        {gameOver && <GameOverScreen />}
 
+        {/* CHQ: Claude AI - only render touch buttons on coarse-pointer
+            (touch) devices; desktop/mouse users rely on keyboard controls */}
+        {isTouchDevice && (
           <TouchControls
             onLeft={() => !gameOver && movePlayer(-1)}
             onRight={() => !gameOver && movePlayer(1)}
@@ -843,9 +908,9 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
             onHold={() => !gameOver && holdPiece()}
             canHold={canHold}
           />
+        )}
 
-          <ControlsHints />
-        </div>
+        <ControlsHints isTouch={isTouchDevice} />
       </div>
     </div>
   );
