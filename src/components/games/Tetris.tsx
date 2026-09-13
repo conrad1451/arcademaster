@@ -15,6 +15,9 @@ const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const INITIAL_DROP_TIME = 800; // ms per tick
 const CELL_SIZE = "min(16px, 7.5vw)";
+// CHQ: Claude AI (Sonnet): Smaller cells for the Hold/Next previews so they can sit beside the
+// board on narrow phone screens without pushing the layout past 100vw.
+const PREVIEW_CELL_SIZE = "min(12px, 4.2vw)";
 
 // Tetromino definitions
 const TETROMINOES = {
@@ -194,8 +197,8 @@ const MiniPiecePreview = ({
       <div
         style={{
           display: "grid",
-          gridTemplateRows: `repeat(4, ${CELL_SIZE})`,
-          gridTemplateColumns: `repeat(4, ${CELL_SIZE})`,
+          gridTemplateRows: `repeat(4, ${PREVIEW_CELL_SIZE})`,
+          gridTemplateColumns: `repeat(4, ${PREVIEW_CELL_SIZE})`,
           gap: "1px",
           backgroundColor: "#111",
           padding: "2px",
@@ -799,16 +802,20 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     >
       <h1 style={{ margin: "0 0 10px 0", fontSize: "24px" }}>TETRIS</h1>
 
+      {/* CHQ: Claude AI: Intentionally "nowrap" here
+          so the previews stay pinned to the right of the board on every
+          screen size, including narrow phones, instead of dropping below. */}
       <div
         style={{
           display: "flex",
-          gap: "20px",
+          gap: "8px",
           alignItems: "flex-start",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           justifyContent: "center",
+          width: "100%",
         }}
       >
-        <div style={{ position: "relative", display: "inline-block" }}>
+        <div style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
           <GameBoard displayGrid={displayGrid} />
 
           {isPaused && (
@@ -861,38 +868,49 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           )}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "200px" }}>
-          {/* Hold & Next Previews */}
-          <div style={{ display: "flex", gap: "6px" }}>
-            <MiniPiecePreview title="HOLD" type={holdType} />
-            <MiniPiecePreview title="NEXT" type={nextType} />
-          </div>
-
-          <div style={{ display: "flex", gap: "6px" }}>
-            <ScoreCard label="SCORE" value={score} />
-            <ScoreCard label="LINES" value={lines} />
-            <ScoreCard label="LEVEL" value={level} />
-          </div>
-
-          <StartGameButton startGame={startGame} gameOver={gameOver} />
-          {gameOver && <GameOverScreen />}
-
-          {/* CHQ: Claude AI - only render touch buttons on coarse-pointer
-              (touch) devices; desktop/mouse users rely on keyboard controls */}
-          {isTouchDevice && (
-            <TouchControls
-              onLeft={() => !gameOver && movePlayer(-1)}
-              onRight={() => !gameOver && movePlayer(1)}
-              onRotate={() => !gameOver && playerRotate()}
-              onSoftDrop={() => !gameOver && drop()}
-              onHardDrop={() => !gameOver && hardDrop()}
-              onHold={() => !gameOver && holdPiece()}
-              canHold={canHold}
-            />
-          )}
-
-          <ControlsHints isTouch={isTouchDevice} />
+        {/* CHQ: Claude AI: Hold & Next Previews - always stay to the right of the board */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}>
+          <MiniPiecePreview title="HOLD" type={holdType} />
+          <MiniPiecePreview title="NEXT" type={nextType} />
         </div>
+      </div>
+
+      {/* Row 2: score, buttons, and controls - free to stack/wrap on
+          narrow screens since they're no longer tied to the board row. */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          width: "100%",
+          maxWidth: "340px",
+          marginTop: "10px",
+        }}
+      >
+        <div style={{ display: "flex", gap: "6px" }}>
+          <ScoreCard label="SCORE" value={score} />
+          <ScoreCard label="LINES" value={lines} />
+          <ScoreCard label="LEVEL" value={level} />
+        </div>
+
+        <StartGameButton startGame={startGame} gameOver={gameOver} />
+        {gameOver && <GameOverScreen />}
+
+        {/* CHQ: Claude AI - only render touch buttons on coarse-pointer
+            (touch) devices; desktop/mouse users rely on keyboard controls */}
+        {isTouchDevice && (
+          <TouchControls
+            onLeft={() => !gameOver && movePlayer(-1)}
+            onRight={() => !gameOver && movePlayer(1)}
+            onRotate={() => !gameOver && playerRotate()}
+            onSoftDrop={() => !gameOver && drop()}
+            onHardDrop={() => !gameOver && hardDrop()}
+            onHold={() => !gameOver && holdPiece()}
+            canHold={canHold}
+          />
+        )}
+
+        <ControlsHints isTouch={isTouchDevice} />
       </div>
     </div>
   );
