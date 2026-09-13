@@ -120,6 +120,37 @@ const checkCollision = (
   return false;
 };
 
+// --- Responsive / device detection ---
+// CHQ: Claude AI - detect coarse-pointer (touch) devices so we can show
+// touch controls on mobile/tablet and keyboard hints on desktop, instead
+// of always rendering both regardless of input method.
+const useIsTouchDevice = (): boolean => {
+  const [isTouch, setIsTouch] = useState<boolean>(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(pointer: coarse)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(pointer: coarse)");
+
+    const handleChange = (e: MediaQueryListEvent) => setIsTouch(e.matches);
+
+    // Covers devices that can switch input mode (e.g. laptops with
+    // touchscreens, tablets with a paired keyboard/mouse).
+    if (mql.addEventListener) {
+      mql.addEventListener("change", handleChange);
+      return () => mql.removeEventListener("change", handleChange);
+    } else {
+      // Safari <14 fallback
+      mql.addListener(handleChange);
+      return () => mql.removeListener(handleChange);
+    }
+  }, []);
+
+  return isTouch;
+};
+
 // CHQ: Gemini AI: Helper component for Next and Hold previews
 const MiniPiecePreview = ({
   title,
@@ -298,7 +329,9 @@ const StartGameButton = ({
   </button>
 );
 
-const ControlsHints = () => (
+// CHQ: Claude AI - hints now vary by input method instead of always
+// listing keyboard shortcuts on devices that have no keyboard.
+const ControlsHints = ({ isTouch }: { isTouch: boolean }) => (
   <div
     style={{
       marginTop: "12px",
@@ -307,9 +340,17 @@ const ControlsHints = () => (
       textAlign: "center",
     }}
   >
-    <p style={{ margin: 0 }}>
-      Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | C / Shift Hold | P / Esc Pause
-    </p>
+    {isTouch ? (
+      <p style={{ margin: 0 }}>
+        Controls: Use the on-screen buttons below to move, rotate, drop, and
+        hold pieces.
+      </p>
+    ) : (
+      <p style={{ margin: 0 }}>
+        Controls: ⬅️ / ➡️ Move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | C
+        / Shift Hold | P / Esc Pause
+      </p>
+    )}
   </div>
 );
 
@@ -403,6 +444,8 @@ const TouchControls = ({
 
 // --- Main Component ---
 export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
+  const isTouchDevice = useIsTouchDevice();
+
   const [grid, setGrid] = useState<Grid>(createEmptyGrid());
   const [score, setScore] = useState<number>(0);
   const [lines, setLines] = useState<number>(0);
@@ -834,17 +877,21 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
           <StartGameButton startGame={startGame} gameOver={gameOver} />
           {gameOver && <GameOverScreen />}
 
-          <TouchControls
-            onLeft={() => !gameOver && movePlayer(-1)}
-            onRight={() => !gameOver && movePlayer(1)}
-            onRotate={() => !gameOver && playerRotate()}
-            onSoftDrop={() => !gameOver && drop()}
-            onHardDrop={() => !gameOver && hardDrop()}
-            onHold={() => !gameOver && holdPiece()}
-            canHold={canHold}
-          />
+          {/* CHQ: Claude AI - only render touch buttons on coarse-pointer
+              (touch) devices; desktop/mouse users rely on keyboard controls */}
+          {isTouchDevice && (
+            <TouchControls
+              onLeft={() => !gameOver && movePlayer(-1)}
+              onRight={() => !gameOver && movePlayer(1)}
+              onRotate={() => !gameOver && playerRotate()}
+              onSoftDrop={() => !gameOver && drop()}
+              onHardDrop={() => !gameOver && hardDrop()}
+              onHold={() => !gameOver && holdPiece()}
+              canHold={canHold}
+            />
+          )}
 
-          <ControlsHints />
+          <ControlsHints isTouch={isTouchDevice} />
         </div>
       </div>
     </div>
