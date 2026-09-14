@@ -236,12 +236,18 @@ const getGhostDropY = (player: Player, grid: Grid): number => {
   return ghostY;
 };
 
-const GameBoard = ({ displayGrid }: { displayGrid: Cell[][] }) => (
+const GameBoard = ({
+  displayGrid,
+  cellSize,
+}: {
+  displayGrid: Cell[][];
+  cellSize: string;
+}) => (
   <div
     style={{
       display: "grid",
-      gridTemplateRows: `repeat(${BOARD_HEIGHT}, ${CELL_SIZE})`,
-      gridTemplateColumns: `repeat(${BOARD_WIDTH}, ${CELL_SIZE})`,
+      gridTemplateRows: `repeat(${BOARD_HEIGHT}, ${cellSize})`,
+      gridTemplateColumns: `repeat(${BOARD_WIDTH}, ${cellSize})`,
       gap: "1px",
       backgroundColor: "#333",
       border: "3px solid #555",
@@ -283,6 +289,7 @@ const GameBoard = ({ displayGrid }: { displayGrid: Cell[][] }) => (
 const ScoreCard = ({ label, value }: { label: string; value: number }) => (
   <div
     style={{
+      display: "flex",
       background: "#2a2a2a",
       padding: "8px 12px",
       borderRadius: "4px",
@@ -290,7 +297,7 @@ const ScoreCard = ({ label, value }: { label: string; value: number }) => (
       flex: 1,
     }}
   >
-    <div style={{ fontSize: "10px", color: "#aaa" }}>{label}</div>
+    <div style={{ fontSize: "10px", color: "#aaa" }}>{label}: </div>
     <div style={{ fontSize: "18px", fontWeight: "bold" }}>{value}</div>
   </div>
 );
@@ -448,6 +455,88 @@ const TouchControls = ({
 // --- Main Component ---
 export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
   const isTouchDevice = useIsTouchDevice();
+
+  // CHQ: Claude AI - "fit to screen" sizing for mobile. Instead of a fixed
+  // vw-based cell size, we measure everything *except* the board (title,
+  // Hold/Next column width, and the row of score/buttons/controls below)
+  // and shrink the board's cell size so the whole layout fits within one
+  // screen on phones, with no scrolling needed.
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const previewColRef = useRef<HTMLDivElement>(null);
+  const row2Ref = useRef<HTMLDivElement>(null);
+  const [fitCellSizePx, setFitCellSizePx] = useState<number | null>(null);
+
+  const computeFit = useCallback(() => {
+    if (!isTouchDevice || typeof window === "undefined") {
+      setFitCellSizePx(null);
+      return;
+    }
+
+    const vw = window.innerWidth;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+
+    const titleH = titleRef.current?.getBoundingClientRect().height ?? 0;
+    const previewW = previewColRef.current?.getBoundingClientRect().width ?? 0;
+    const row2H = row2Ref.current?.getBoundingClientRect().height ?? 0;
+
+    const CONTAINER_PADDING = 10; // matches container's inline padding
+    const STACK_GAP = 8; // matches container's flex `gap`
+    const ROW1_GAP = 8; // gap between board and preview column
+    const BOARD_CHROME = 6 + 4 + (BOARD_HEIGHT - 1); // border + padding + row gaps
+    const BOARD_CHROME_W = 6 + 4 + (BOARD_WIDTH - 1); // border + padding + col gaps
+
+    // Height budget: whatever's left over after title, row2, container
+    // padding, and the gaps between them goes to the board.
+    const availableHeight =
+      vh -
+      CONTAINER_PADDING * 2 -
+      titleH -
+      row2H -
+      STACK_GAP * 2 -
+      BOARD_CHROME;
+    const cellFromHeight = availableHeight / BOARD_HEIGHT;
+
+    // Width budget: whatever's left over after container padding, the
+    // preview column, and the gap between board/previews.
+    const availableWidth =
+      vw - CONTAINER_PADDING * 2 - previewW - ROW1_GAP - BOARD_CHROME_W;
+    const cellFromWidth = availableWidth / BOARD_WIDTH;
+
+    // Never exceed the normal desktop-ish max, and never go below a
+    // playable minimum.
+    const next = Math.floor(Math.min(cellFromHeight, cellFromWidth, 16));
+    setFitCellSizePx(Math.max(next, 8));
+  }, [isTouchDevice]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    computeFit();
+
+    window.addEventListener("resize", computeFit);
+    window.addEventListener("orientationchange", computeFit);
+    window.visualViewport?.addEventListener("resize", computeFit);
+
+    // A ResizeObserver on the measured elements catches any height change
+    // automatically - e.g. the GAME OVER banner appearing, touch controls
+    // mounting - without needing to track every relevant state value here.
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => computeFit());
+      if (titleRef.current) ro.observe(titleRef.current);
+      if (previewColRef.current) ro.observe(previewColRef.current);
+      if (row2Ref.current) ro.observe(row2Ref.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", computeFit);
+      window.removeEventListener("orientationchange", computeFit);
+      window.visualViewport?.removeEventListener("resize", computeFit);
+      ro?.disconnect();
+    };
+  }, [computeFit]);
+
+  const boardCellSize =
+    isTouchDevice && fitCellSizePx ? `${fitCellSizePx}px` : CELL_SIZE;
 
   const [grid, setGrid] = useState<Grid>(createEmptyGrid());
   const [score, setScore] = useState<number>(0);
@@ -798,11 +887,30 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         outline: "none",
         padding: "10px",
         boxSizing: "border-box",
+        gap: "8px",
+        // On touch devices, pin the whole layout to one screen's worth of
+        // height so nothing needs to scroll. Desktop keeps its natural
+        // height. overflowY stays "auto" as a safety net in case the fit
+        // calculation ever runs slightly short.
+        ...(isTouchDevice
+          ? {
+              height: "100dvh",
+              maxHeight: "100dvh",
+              overflowY: "auto",
+            }
+          : {}),
       }}
     >
-      <h1 style={{ margin: "0 0 10px 0", fontSize: "24px" }}>TETRIS</h1>
+      <h1
+        ref={titleRef}
+        style={{
+          color: "#888",
+          margin: 0, fontSize: "24px"
+        }}>
+          TETRIS
+      </h1>
 
-      {/* CHQ: Claude AI: Intentionally "nowrap" here
+      {/* CHQ: Claude AI: Row 1: board + Hold/Next. flexWrap is intentionally "nowrap" here
           so the previews stay pinned to the right of the board on every
           screen size, including narrow phones, instead of dropping below. */}
       <div
@@ -816,7 +924,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         }}
       >
         <div style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
-          <GameBoard displayGrid={displayGrid} />
+          <GameBoard displayGrid={displayGrid} cellSize={boardCellSize} />
 
           {isPaused && (
             <div
@@ -869,29 +977,35 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
         </div>
 
         {/* CHQ: Claude AI: Hold & Next Previews - always stay to the right of the board */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}>
+        <div
+          ref={previewColRef}
+          style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}
+        >
           <MiniPiecePreview title="HOLD" type={holdType} />
           <MiniPiecePreview title="NEXT" type={nextType} />
+          <ScoreCard label="SCORE" value={score} />        
+          <ScoreCard label="LINES" value={lines} />        
+          <ScoreCard label="LEVEL" value={level} />
         </div>
       </div>
 
       {/* Row 2: score, buttons, and controls - free to stack/wrap on
           narrow screens since they're no longer tied to the board row. */}
       <div
+        ref={row2Ref}
         style={{
           display: "flex",
           flexDirection: "column",
           gap: "10px",
           width: "100%",
           maxWidth: "340px",
-          marginTop: "10px",
         }}
       >
-        <div style={{ display: "flex", gap: "6px" }}>
+        {/* <div style={{ display: "flex", gap: "6px" }}>
           <ScoreCard label="SCORE" value={score} />
           <ScoreCard label="LINES" value={lines} />
           <ScoreCard label="LEVEL" value={level} />
-        </div>
+        </div> */}
 
         <StartGameButton startGame={startGame} gameOver={gameOver} />
         {gameOver && <GameOverScreen />}

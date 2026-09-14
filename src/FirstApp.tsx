@@ -204,7 +204,7 @@ const MainApp = (props: {
           pt: 4,
         }}
       >
-        <>
+        <div style={{ maxHeight: "5vh" }}>
           {currentPath === "/" ? (
             <ServerPinger />
           ) : (
@@ -216,11 +216,11 @@ const MainApp = (props: {
               ← Back to Home
             </Button>
           )}
-        </>
+        </div>
         {content}
         {/* Only show ads and footer on non-game pages */}
         {!isGamePage && (
-          <>
+          <div>
             <div id="ta-ad-container" style={{ minHeight: "100px" }} />
             <div className="footer">
               <Button onClick={() => navigate("/terms")}>Terms of Use</Button>
@@ -231,7 +231,7 @@ const MainApp = (props: {
                 Disclaimer
               </Button>
             </div>
-          </>
+          </div>
         )}
       </Box>
     </Box>
