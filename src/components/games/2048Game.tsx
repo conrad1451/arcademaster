@@ -3,96 +3,33 @@
 // CHQ: Gemini AI scaffolded, Claude AI (Sonnet) added a feature, and I edited heavily
 // Touch swipe support added for mobile play
 // CHQ: Claude AI (Haiku): Added smooth tile animations for movements and merges
+//
+// Refactor: game rules now live in src/games/2048/{logic,reducer,input}.ts.
+// This file keeps only the view and the side effects (listeners, timers, scoring).
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useReducer, useRef } from "react";
 
 import { submitScore } from "../../utils/submitScore";
-type Board = number[][];
-type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
+import type { Board, TileInfo } from "../../games/2048/logic";
+import {
+  createInitialState,
+  gameReducer,
+  type GameAction,
+  type GameState,
+} from "../../games/2048/reducer";
+import {
+  getSwipeDirection,
+  keyToDirection,
+  type Point,
+} from "../../games/2048/input";
 
 interface GameProps {
   username?: string;
+  /** Called once when the game ends. Defaults to submitting the score. */
+  onGameOver?: (score: number) => void;
+  /** Starting board (mainly a test seam). Defaults to a random board. */
+  initialBoard?: Board;
 }
-interface TileInfo {
-  value: number;
-  isNew: boolean;
-  isMerged: boolean;
-}
-
-const BOARD_SIZE = 4;
-
-function createEmptyBoard(): Board {
-  return Array(BOARD_SIZE)
-    .fill(0)
-    .map(() => Array(BOARD_SIZE).fill(0));
-}
-
-// CHQ: Gemini AI: Add a random 2 or 4 to a free spot
-const addRandomTile = (currentBoard: Board): Board => {
-  const emptyCells: [number, number][] = [];
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (currentBoard[r][c] === 0) emptyCells.push([r, c]);
-    }
-  }
-
-  if (emptyCells.length === 0) return currentBoard;
-
-  const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-  const newBoard = currentBoard.map((row) => [...row]);
-  newBoard[r][c] = Math.random() < 0.9 ? 2 : 4;
-  return newBoard;
-};
-
-// CHQ: Gemini AI: Helper: Rotate board counter-clockwise
-const rotateLeft = (matrix: Board): Board => {
-  const result = createEmptyBoard();
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      result[BOARD_SIZE - 1 - c][r] = matrix[r][c];
-    }
-  }
-  return result;
-};
-
-// CHQ: Gemini AI: Core slide and merge logic (operates leftward)
-const slideAndMergeRow = (
-  row: number[],
-): { newRow: number[]; gainedScore: number } => {
-  const nonZero = row.filter((val) => val !== 0);
-  const newRow: number[] = [];
-  let gainedScore = 0;
-
-  for (let i = 0; i < nonZero.length; i++) {
-    if (i < nonZero.length - 1 && nonZero[i] === nonZero[i + 1]) {
-      const mergedVal = nonZero[i] * 2;
-      newRow.push(mergedVal);
-      gainedScore += mergedVal;
-      i++;
-    } else {
-      newRow.push(nonZero[i]);
-    }
-  }
-
-  while (newRow.length < BOARD_SIZE) {
-    newRow.push(0);
-  }
-
-  return { newRow, gainedScore };
-};
-
-const checkGameOver = (currentBoard: Board): boolean => {
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (currentBoard[r][c] === 0) return false;
-      if (c < BOARD_SIZE - 1 && currentBoard[r][c] === currentBoard[r][c + 1])
-        return false;
-      if (r < BOARD_SIZE - 1 && currentBoard[r][c] === currentBoard[r + 1][c])
-        return false;
-    }
-  }
-  return true;
-};
 
 // CHQ: Gemini AI: Color mapping for classic 2048 styling
 const getTileStyle = (
@@ -313,193 +250,76 @@ const GameBoard = React.forwardRef<
 });
 GameBoard.displayName = "GameBoard";
 
-// CHQ: Gemini AI: Helper function to create a ready-to-play initial board
-const createInitialBoard = (): Board => {
-  let board = createEmptyBoard();
-  board = addRandomTile(board);
-  board = addRandomTile(board);
-  return board;
-};
+const reducer = (state: GameState, action: GameAction): GameState =>
+  gameReducer(state, action);
 
-// CHQ: Claude AI (Haiku): Create metadata grid tracking new/merged tiles
-const createTileMetadata = (board: Board): TileInfo[][] => {
-  return board.map((row) =>
-    row.map((val) => ({
-      value: val,
-      isNew: true,
-      isMerged: false,
-    })),
+export const The2048Game: React.FC<GameProps> = ({
+  username = "Guest",
+  onGameOver,
+  initialBoard,
+}) => {
+  const [state, dispatch] = useReducer(reducer, initialBoard, (board) =>
+    createInitialState(Math.random, board),
   );
-};
+  const { board, tileMetadata, score, gameOver } = state;
 
-// CHQ: Claude AI (Sonnet): minimum finger travel (px) before a touch counts as a swipe,
-// rather than an accidental tap/jiggle
-const SWIPE_THRESHOLD = 30;
+  // Track where a touch started so we can measure the swipe on release
+  const touchStartRef = useRef<Point | null>(null);
 
-export const The2048Game: React.FC<GameProps> = ({ username = "Guest" }) => {
-  // CHQ: Gemini AI: replaced createEmptyBoard with a helper
-  //      function createInitialBoard which gets called here
-  const [board, setBoard] = useState<Board>(createInitialBoard);
-  const [tileMetadata, setTileMetadata] = useState<TileInfo[][]>(
-    createTileMetadata(board),
-  );
-  const [score, setScore] = useState<number>(0);
-  const [gameOver, setGameOver] = useState<boolean>(false);
+  const initGame = useCallback(() => dispatch({ type: "RESET" }), []);
 
-  // CHQ: Claude AI (Sonnet): track where a touch started so we can measure the swipe on release
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-
-  // CHQ: Claude AI (Haiku): Reset animation metadata when game resets
-  const initGame = useCallback(() => {
-    const newBoard = createInitialBoard();
-    setBoard(newBoard);
-    setTileMetadata(createTileMetadata(newBoard));
-    setScore(0);
-    setGameOver(false);
-  }, []);
-
-  // CHQ: Claude AI (Haiku): Clear animation flags after a delay (so animations finish)
+  // Clear animation flags after a delay (so animations finish)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTileMetadata((prev) =>
-        prev.map((row) =>
-          row.map((tile) => ({
-            ...tile,
-            isNew: false,
-            isMerged: false,
-          })),
-        ),
-      );
-    }, 150); // Match the transition duration in getTileStyle
-
+    const timer = setTimeout(
+      () => dispatch({ type: "CLEAR_ANIMATIONS" }),
+      150, // Match the transition duration in getTileStyle
+    );
     return () => clearTimeout(timer);
   }, [tileMetadata]);
 
-  const move = useCallback(
-    (direction: Direction) => {
-      if (gameOver) return;
+  // Report the final score exactly once per game
+  const gameOverHandlerRef = useRef<(finalScore: number) => void>(() => {});
+  useEffect(() => {
+    gameOverHandlerRef.current =
+      onGameOver ??
+      ((finalScore) => {
+        void submitScore(username, "GAME_2048", finalScore);
+      });
+  }, [onGameOver, username]);
 
-      let tempBoard = board.map((row) => [...row]);
-      let totalGainedScore = 0;
-      const mergedPositions = new Set<string>();
-
-      // CHQ: Gemini AI: Rotate board so we always move "LEFT"
-      const rotations = { LEFT: 0, DOWN: 3, RIGHT: 2, UP: 1 }[direction];
-      for (let i = 0; i < rotations; i++) {
-        tempBoard = rotateLeft(tempBoard);
-      }
-
-      // CHQ: Gemini AI: Process row sliding/merging
-      const nextBoard: Board = [];
-      for (let r = 0; r < BOARD_SIZE; r++) {
-        const { newRow, gainedScore } = slideAndMergeRow(tempBoard[r]);
-        nextBoard.push(newRow);
-        totalGainedScore += gainedScore;
-
-        // Track which positions were merged
-        if (gainedScore > 0) {
-          for (let c = 0; c < newRow.length; c++) {
-            if (newRow[c] > 0) {
-              mergedPositions.add(`${r}-${c}`);
-            }
-          }
-        }
-      }
-      tempBoard = nextBoard;
-
-      // CHQ: Gemini AI: Rotate back to original orientation
-      for (let i = 0; i < (4 - rotations) % 4; i++) {
-        tempBoard = rotateLeft(tempBoard);
-      }
-
-      // CHQ: Gemini AI: Check if board changed
-      const hasChanged = JSON.stringify(board) !== JSON.stringify(tempBoard);
-
-      // CHQ: ChatGPT fixed score submission using stale score
-      if (hasChanged) {
-        const updatedBoard = addRandomTile(tempBoard);
-        setBoard(updatedBoard);
-
-        // Create metadata marking new and merged tiles
-        const newMetadata = updatedBoard.map((row, rIdx) =>
-          row.map((val, cIdx) => ({
-            value: val,
-            isNew: updatedBoard[rIdx][cIdx] !== 0 && board[rIdx][cIdx] === 0,
-            isMerged: mergedPositions.has(`${rIdx}-${cIdx}`),
-          })),
-        );
-        setTileMetadata(newMetadata);
-
-        const finalScore = score + totalGainedScore;
-        setScore(finalScore);
-
-        if (checkGameOver(updatedBoard)) {
-          setGameOver(true);
-          submitScore(username, "GAME_2048", finalScore);
-        }
-      }
-    },
-    [board, gameOver, score, username],
-  );
+  useEffect(() => {
+    if (gameOver) gameOverHandlerRef.current(score);
+  }, [gameOver, score]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case "ArrowUp":
-          e.preventDefault();
-          move("UP");
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-          move("DOWN");
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          move("LEFT");
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          move("RIGHT");
-          break;
-      }
+      const direction = keyToDirection(e.key);
+      if (!direction) return;
+      e.preventDefault();
+      dispatch({ type: "MOVE", direction });
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [move]);
+  }, []);
 
-  // CHQ: Claude AI (Sonnet): record the starting touch point
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   }, []);
 
-  // CHQ: Claude AI (Sonnet): compare the touch end point to the start point to figure out
-  // which direction the finger travelled furthest, then fire that move
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      const start = touchStartRef.current;
-      if (!start) return;
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    if (!start) return;
+    touchStartRef.current = null;
 
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - start.x;
-      const dy = touch.clientY - start.y;
-
-      touchStartRef.current = null;
-
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_THRESHOLD) {
-        // too small to count as an intentional swipe
-        return;
-      }
-
-      if (Math.abs(dx) > Math.abs(dy)) {
-        move(dx > 0 ? "RIGHT" : "LEFT");
-      } else {
-        move(dy > 0 ? "DOWN" : "UP");
-      }
-    },
-    [move],
-  );
+    const touch = e.changedTouches[0];
+    const direction = getSwipeDirection(start, {
+      x: touch.clientX,
+      y: touch.clientY,
+    });
+    if (direction) dispatch({ type: "MOVE", direction });
+  }, []);
 
   return (
     <div
