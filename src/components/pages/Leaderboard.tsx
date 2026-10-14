@@ -18,15 +18,9 @@ import {
   CircularProgress,
 } from "@mui/material";
 
-interface Score {
-  id: number;
-  username: string;
-  gameType: "GAME_2048" | "PING_PONG" | "TETRIS";
-  score: number;
-  updatedAt: string;
-}
+import { fetchScores, type GameType, type Score } from "../../api/client";
 
-type GameTab = "GAME_2048" | "PING_PONG" | "TETRIS";
+type GameTab = GameType;
 
 const gameLabels: Record<GameTab, string> = {
   GAME_2048: "2048",
@@ -38,39 +32,36 @@ export const Leaderboard: React.FC = () => {
   const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<GameTab>("GAME_2048");
-
-  const baseUrl = import.meta.env.VITE_API_URL;
+  const [error, setError] = useState<string | null>(null);
 
   // CHQ: Claude AI (Sonnet): backend only exposes GET /api/scores/game/{gameType},
   // there's no bulk "all scores" endpoint - so fetch per active tab instead of once
   useEffect(() => {
     let cancelled = false;
 
-    const fetchScores = async () => {
+    const loadScores = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${baseUrl}/api/scores/game/${activeTab}`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch scores: ${response.status}`);
-        }
-
-        const data: Score[] = await response.json();
+        setError(null);
+        const data = await fetchScores(activeTab);
         if (!cancelled) setScores(data);
-      } catch (error) {
-        console.error("❌ Error fetching scores:", error);
-        if (!cancelled) setScores([]);
+      } catch (err) {
+        console.error("❌ Error fetching scores:", err);
+        if (!cancelled) {
+          setScores([]);
+          setError(err instanceof Error ? err.message : String(err));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    fetchScores();
+    loadScores();
 
     return () => {
       cancelled = true;
     };
-  }, [baseUrl, activeTab]);
+  }, [activeTab]);
 
   // CHQ: Claude AI (Sonnet): backend already returns highest-score-first per the README,
   // but sort defensively client-side too in case that ever changes
@@ -103,6 +94,17 @@ export const Leaderboard: React.FC = () => {
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
             <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Box sx={{ p: 4, textAlign: "center" }} role="alert">
+            <Typography color="error">
+              ⚠️ Couldn't load the leaderboard. Try again shortly.
+            </Typography>
+            {import.meta.env.DEV && (
+              <Typography variant="caption" color="textSecondary">
+                {error}
+              </Typography>
+            )}
           </Box>
         ) : sortedScores.length === 0 ? (
           <Box sx={{ p: 4, textAlign: "center" }}>

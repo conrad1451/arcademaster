@@ -17,6 +17,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { setUsername } from "./store/userSlice";
 import type { RootState } from "./store";
+import { pingHealth } from "./api/client";
 
 import PingPongGame from "./components/games/PingPongGame";
 import { The2048Game } from "./components/games/2048Game";
@@ -117,18 +118,13 @@ const ServerPinger = () => {
   // CHQ: Claude AI (Sonnet) changed status from a boolean to an
   //      ennumeration to handle loading, failure and success states
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const baseUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     let cancelled = false;
 
     const wakeServer = async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/health`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to reach server: ${response.status}`);
-        }
+        await pingHealth();
         if (!cancelled) setStatus("ok");
       } catch (error) {
         console.error("❌ Error connecting to server:", error);
@@ -141,7 +137,7 @@ const ServerPinger = () => {
     return () => {
       cancelled = true;
     };
-  }, [baseUrl]);
+  }, []);
 
   return (
     // CHQ: Claude AI (Sonnet) added error state handling
