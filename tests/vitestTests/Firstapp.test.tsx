@@ -36,15 +36,15 @@ vi.mock("../../src/components/pages/Leaderboard", () => ({
 }));
 
 vi.mock("../../src/components/pages/PrivacyPolicy", () => ({
-  default: () => <div>Privacy Policy</div>,
+  default: () => <div>Privacy Policy Page</div>,
 }));
 
 vi.mock("../../src/components/pages/TermsOfUse", () => ({
-  default: () => <div>Terms of Use</div>,
+  default: () => <div>Terms of Use Page</div>,
 }));
 
 vi.mock("../../src/components/pages/Disclaimer", () => ({
-  default: () => <div>Disclaimer</div>,
+  default: () => <div>Disclaimer Page</div>,
 }));
 
 // Mock fetch for ServerPinger
@@ -68,8 +68,11 @@ describe("FirstApp", () => {
       },
     });
 
-    // Reset fetch mock
-    vi.mocked(globalThis.fetch).mockReset();
+    // Reset fetch mock; default to a healthy server so ServerPinger doesn't
+    // throw on `undefined.ok` in tests that don't care about it.
+    vi.mocked(globalThis.fetch)
+      .mockReset()
+      .mockResolvedValue({ ok: true } as Response);
   });
 
   // ============ INITIAL STATE & USERNAME DIALOG TESTS ============
@@ -357,7 +360,10 @@ describe("FirstApp", () => {
         </Provider>,
       );
 
-      expect(screen.getByRole("progressbar")).toBeInTheDocument();
+      // The username dialog is open, so MUI marks the page behind it aria-hidden.
+      expect(
+        screen.getByRole("progressbar", { hidden: true }),
+      ).toBeInTheDocument();
     });
 
     it("should show success message when server responds with 200", async () => {
@@ -580,7 +586,7 @@ describe("FirstApp", () => {
         .find((btn) => btn.textContent === "Privacy Policy");
       await userEvent.click(privacyButton!);
 
-      expect(screen.getByText("Privacy Policy")).toBeInTheDocument();
+      expect(screen.getByText("Privacy Policy Page")).toBeInTheDocument();
     });
 
     it("should navigate to Terms of Use", async () => {
@@ -606,7 +612,7 @@ describe("FirstApp", () => {
         .find((btn) => btn.textContent === "Terms of Use");
       await userEvent.click(termsButton!);
 
-      expect(screen.getByText("Terms of Use")).toBeInTheDocument();
+      expect(screen.getByText("Terms of Use Page")).toBeInTheDocument();
     });
 
     it("should navigate to Disclaimer", async () => {
@@ -632,7 +638,7 @@ describe("FirstApp", () => {
         .find((btn) => btn.textContent === "Disclaimer");
       await userEvent.click(disclaimerButton!);
 
-      expect(screen.getByText("Disclaimer")).toBeInTheDocument();
+      expect(screen.getByText("Disclaimer Page")).toBeInTheDocument();
     });
 
     it("should return to home when Back button is clicked", async () => {
@@ -746,6 +752,17 @@ describe("FirstApp", () => {
   // ============ LAYOUT & STYLING TESTS ============
 
   describe("Layout & Styling", () => {
+    // FirstApp toggles a class on #root, which lives in index.html (not rendered here)
+    let root: HTMLDivElement;
+    beforeEach(() => {
+      root = document.createElement("div");
+      root.id = "root";
+      document.body.appendChild(root);
+    });
+    afterEach(() => {
+      root.remove();
+    });
+
     beforeEach(() => {
       // vi.mocked safely handles the type inference for you!
       vi.mocked(globalThis.fetch).mockResolvedValueOnce({
@@ -774,7 +791,6 @@ describe("FirstApp", () => {
         screen.getByRole("button", { name: /Go to Ping Pong game/ }),
       );
 
-      const root = document.getElementById("root");
       await waitFor(() => {
         expect(root?.classList.contains("game-page")).toBe(true);
       });
@@ -801,7 +817,6 @@ describe("FirstApp", () => {
         screen.getByRole("button", { name: /Go to Tetris game/ }),
       );
 
-      const root = document.getElementById("root");
       await waitFor(() => {
         expect(root?.classList.contains("game-page")).toBe(true);
       });
@@ -833,14 +848,19 @@ describe("FirstApp", () => {
         ).toBeInTheDocument();
       });
 
+      // Ads are shown on the home page...
+      expect(document.getElementById("ta-ad-container")).toBeInTheDocument();
+
       await userEvent.click(
         // screen.getByRole("button", { name: /Go to the 2048 game/ }),
         screen.getByRole("button", { name: /Go to the 2048 game/ }),
       );
 
-      const adContainer = document.getElementById("apitiny-adz-container");
+      // ...and removed once a game is open.
       await waitFor(() => {
-        expect(adContainer).not.toBeInTheDocument();
+        expect(
+          document.getElementById("ta-ad-container"),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -855,17 +875,20 @@ describe("FirstApp", () => {
       await userEvent.type(input, "FooterTest");
       await userEvent.click(screen.getByRole("button", { name: /Start/ }));
 
-      const adContainer = document.getElementById("apitiny-adz-container");
+      const adContainer = document.getElementById("ta-ad-container");
       expect(adContainer).toBeInTheDocument();
 
-      const footerButtons = screen
-        .getAllByRole("button")
-        .filter(
-          (btn) =>
-            btn.textContent === "Terms of Use" ||
-            btn.textContent === "Privacy Policy",
-        );
-      expect(footerButtons.length).toBeGreaterThan(0);
+      // findByRole waits for the username dialog to finish closing; until then
+      // MUI keeps the page behind it aria-hidden.
+      expect(
+        await screen.findByRole("button", { name: "Terms of Use" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Privacy Policy" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Disclaimer" }),
+      ).toBeInTheDocument();
     });
   });
 
