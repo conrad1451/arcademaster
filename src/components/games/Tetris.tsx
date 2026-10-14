@@ -510,7 +510,12 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    computeFit();
+
+    // CHQ: Claude AI (Sonnet): Initial measurement runs from 
+    //      a frame callback, not synchronously in the effect 
+    //      body (react-hooks/set-state-in-effect). By then the 
+    //      refs are laid out.
+    const frame = window.requestAnimationFrame(() => computeFit());
 
     window.addEventListener("resize", computeFit);
     window.addEventListener("orientationchange", computeFit);
@@ -528,6 +533,7 @@ export const Tetris: React.FC<GameProps> = ({ username = "Guest" }) => {
     }
 
     return () => {
+      window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", computeFit);
       window.removeEventListener("orientationchange", computeFit);
       window.visualViewport?.removeEventListener("resize", computeFit);
